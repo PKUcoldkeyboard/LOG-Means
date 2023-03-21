@@ -21,7 +21,7 @@ LOG-Means算法是一种新型、简化的、高效、对大数据集和大搜�
 ## 项目协作者
 
 ## 许可证
-This project is licensed under the Apache License. See the LICENSE file for more information.
+This project is licensed under the Apache 2.0 License. See the LICENSE file for more information.
 
 ## 参考文献
 [1] Manuel Fritz, Michael Behringer, Holger Schwarz. LOG-Means: Efficiently Estimating the Number of Clusters in Large Datasets. PVLDB, 13(11): 2118-2131, 2020. DOI: https://doi.org/10.14778/3407790.3407813
