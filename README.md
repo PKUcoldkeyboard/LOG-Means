@@ -13,7 +13,7 @@ LOG-Means算法是一种新型、简化的、高效、对大数据集和大搜�
 3. 确定簇的个数并进行聚类分析：根据前面步骤中得到的每个聚类的Gain值，采用BIC（贝叶斯信息准则）方法确定最可能的簇个数。最后使用该簇个数对整个数据集进行K-means聚类，并用Silhouette系数来评估该聚类结果的质量。
 
 <div align="center">
-  <img src="https://cuterwrite-1302252842.file.myqcloud.com/img/20230321152315.png">
+  <img src="image/algorithm.png">
 </div>
 
 ## 如何使用
