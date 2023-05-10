@@ -1,32 +1,54 @@
-# Prerequisites
-*.d
-
 # Compiled Object files
-*.slo
-*.lo
 *.o
 *.obj
 
-# Precompiled Headers
-*.gch
-*.pch
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
+# Statically linked libraries
 *.a
 *.lib
+
+# Dynamic libraries
+*.so
+*.so.*
+*.dylib
 
 # Executables
 *.exe
 *.out
 *.app
+
+# Build directory
+/build/
+
+# Visual Studio files
+*.sln
+*.suo
+*.vcxproj
+*.vcxproj.filters
+*.pdb
+
+# Xcode files
+*.xcodeproj
+*.xcworkspace
+*.dSYM/
+
+# Eclipse files
+.settings/
+.cproject
+.project
+
+# Text editor files
+*.swp
+*~
+.DS_Store
+
+# CMake generated files
+build/
+CMakeFiles/
+CMakeCache.txt
+Makefile
+cmake_install.cmake
+install_manifest.txt
+
+.vscode/
+cluster
+test/runTests

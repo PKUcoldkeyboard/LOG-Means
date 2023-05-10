@@ -1,1 +1,0 @@
-/usr/bin/c++ -O3 -flto -march=native -mtune=generic  -flto CMakeFiles/cluster.dir/src/main.cpp.o -o cluster 
