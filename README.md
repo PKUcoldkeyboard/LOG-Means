@@ -1,6 +1,11 @@
 <h1 align="center">LOG-Means</h1>
 
-<div align="center"><img src="https://img.shields.io/badge/version-0.1-orange"/></div>
+<div align="center">
+  <img src="https://img.shields.io/badge/version-0.1-orange"/>
+  <img src="https://img.shields.io/badge/Eigen3-3.3.39-blueviolet">
+  <img src="https://img.shields.io/badge/Linux-passing-brightgreen">
+  <img src="https://img.shields.io/badge/c%2B%2B-%3E%3D11-brightgreen">
+</div>
 
 本项目是根据论文[1] Manuel Fritz, Michael Behringer, Holger Schwarz. LOG-Means: Efficiently Estimating the Number of Clusters in Large Datasets. PVLDB, 13(11): 2118-2131, 2020. DOI: https://doi.org/10.14778/3407790.3407813, 基于C++复现的LOG-Means算法项目。
 
@@ -16,6 +21,22 @@ LOG-Means算法是一种新型、简化的、高效、对大数据集和大搜�
   <img src="image/algorithm.png">
 </div>
 
+## 环境需求
+- C++编译器（支持C++11或更高版本）
+- 第三方库：Eigen3
+
+## 项目模块
+本项目的主要模块包括：
+- 数据预处理模块（Preprocessing）
+- 计算聚类中心的Gain值模块（Gain Calculation）
+- 确定簇的个数并进行聚类分析模块（Cluster Analysis）
+以下是这些模块之间的关系：
+```
++------------------+    +---------------------+    +--------------------+
+| Preprocessing    +--->+ Gain Calculation    +--->+ Cluster Analysis   |
++------------------+    +---------------------+    +--------------------+
+```
+
 ## 如何使用
 - 构建项目
 ```
@@ -27,9 +48,37 @@ LOG-Means算法是一种新型、简化的、高效、对大数据集和大搜�
 ./build/cluster <dataset>
 ```
 
+## 模块细节
+### 数据预处理模块（Preprocessing）
+本模块主要负责以下任务：
+
+1. 读取输入数据。
+2. 选择一个较小的样本子集。
+3. 计算特征矩阵的协方差矩阵。
+4. 用PCA方法对数据集进行降维。
+5. 对降维后的数据进行K-means聚类。
+6. 筛选出可能的簇个数。
+
+### 计算聚类中心的Gain值模块（Gain Calculation）
+本模块主要负责以下任务：
+
+1. 通过取不同的初始聚类中心，得到多个聚类结果。
+2. 针对每个聚类结果，计算其聚类中心的Gain值。
+3. 计算Sum of Squares（SS）和Degrees of Freedom（Df）参数。
+
+### 确定簇的个数并进行聚类分析模块（Cluster Analysis）
+本模块主要负责以下任务：
+
+1. 根据Gain值，采用BIC方法确定最可能的簇个数。
+2. 使用该簇个数对整个数据集进行K-means聚类。
+3. 用Silhouette系数评估该聚类结果的质量。
+
+## 测试与验证
+本项目将使用一系列测试用例对每个模块进行单元测试，以确保它们的正确性和有效性。测试用例应涵盖正常情况、边缘情况和异常情况。此外，我们还将使用一些具有不同特征和规模的真实数据集进行集成测试，以评估算法的性能和准确性。
+
 ## 项目协作者
-<a href="https://github.com/PKUcoldkeyboard/FAS/graphs/contributors">
-  <img src="https://contrib.rocks./image?repo=PKUcoldkeyboard/FAS" />
+<a href="https://github.com/PKUcoldkeyboard/LOG-Means/graphs/contributors">
+  <img src="https://contrib.rocks./image?repo=PKUcoldkeyboard/LOG-Means" />
 </a>
 
 Made with [contrib.rocks](https://contrib.rocks.).
