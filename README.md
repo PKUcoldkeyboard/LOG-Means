@@ -5,6 +5,7 @@
   <img src="https://img.shields.io/badge/Eigen3-3.3.39-blueviolet">
   <img src="https://img.shields.io/badge/Linux-passing-brightgreen">
   <img src="https://img.shields.io/badge/c%2B%2B-%3E%3D11-brightgreen">
+  <img src="https://img.shields.io/github/stars/PKUcoldkeyboard/LOG-Means?style=social">
 </div>
 
 本项目是根据论文[1] Manuel Fritz, Michael Behringer, Holger Schwarz. LOG-Means: Efficiently Estimating the Number of Clusters in Large Datasets. PVLDB, 13(11): 2118-2131, 2020. DOI: https://doi.org/10.14778/3407790.3407813, 基于C++复现的LOG-Means算法项目。
