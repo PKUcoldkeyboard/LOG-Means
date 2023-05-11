@@ -16,5 +16,5 @@ add_executable(runTests ${TEST_SOURCES})
 # 链接gtest
 target_link_libraries(runTests ${GTEST_BOTH_LIBRARIES} ${GTEST_MAIN_LIBRARIES} pthread)
 
-# 指定测试和可执行文件
-add_test(NAME AllTests COMMAND runTests)
+# 添加测试
+gtest_discover_tests(runTests)
