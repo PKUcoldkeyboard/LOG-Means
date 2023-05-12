@@ -1,0 +1,41 @@
+# C++ 编译输出文件
+*.o
+*.a
+*.so
+*.out
+*.dSYM
+*.exe
+*.dll
+*.lib
+
+# 项目中的构建文件夹
+build/
+Release/
+Debug/
+
+# CMake 生成的文件
+CMakeFiles/
+CMakeCache.txt
+*.cmake
+Makefile
+CMakeLists.txt.user
+
+# 编辑器和IDE生成的文件
+.vs/
+.vscode/
+*.sublime-*
+*.sln
+*.suo
+*.xcodeproj
+*.xcworkspace
+*.xccheckout
+*.xcuserstate
+
+# 其他临时文件
+*.tmp
+*.swp
+*.swo
+*~
+.DS_Store
+
+cluster

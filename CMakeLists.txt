@@ -32,7 +32,7 @@ set(SOURCES
 include_directories(include)
 
 # spdlog头文件
-#include_directories(third_party)
+include_directories(third-party)
 
 # Eigen库引入
 find_package(Eigen3 REQUIRED)
