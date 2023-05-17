@@ -1,23 +1,47 @@
 #include <iostream>
-#include <eigen3/Eigen/Dense>
+#include "kmeans.hpp"
 
-int main(int argc, const char* argv[]) {
-    Eigen::Matrix3d m1;
-    m1 << 1, 2, 3,
-          4, 5, 6,
-          7, 8, 9;
-    Eigen::Matrix3d m2;
-    m2 << 10, 11, 12,
-          13, 14, 15,
-          16, 17, 18;
-    Eigen::Vector3d v1(1, 2, 3);
-    Eigen::Vector3d v2(4, 5, 6);
-    
-    Eigen::Matrix3d result1 = m1 * m2; // 矩阵乘法
-    Eigen::Vector3d result2 = v1 + v2; // 向量加法
-    
-    std::cout << "Matrix1 * Matrix2:\n" << result1 << std::endl;
-    std::cout << "Vector1 + Vector2:\n" << result2 << std::endl;
-    
-    return 0;
+int main(int argc, const char *argv[]) {
+      // kmeans测试数据集
+      std::vector<Eigen::VectorXd> data;
+      data.push_back(Eigen::VectorXd(2));
+      data.back() << 1, 1;
+      data.push_back(Eigen::VectorXd(2));
+      data.back() << 1, 2;
+      data.push_back(Eigen::VectorXd(2));
+      data.back() << 2, 1;
+      data.push_back(Eigen::VectorXd(2));
+      data.back() << 2, 2;
+      data.push_back(Eigen::VectorXd(2));
+      data.back() << 5, 5;
+      data.push_back(Eigen::VectorXd(2));
+      data.back() << 5, 6;
+      data.push_back(Eigen::VectorXd(2));
+      data.back() << 6, 5;
+      data.push_back(Eigen::VectorXd(2));
+      data.back() << 6, 6;
+      data.push_back(Eigen::VectorXd(2));
+      data.back() << 9, 9;
+      data.push_back(Eigen::VectorXd(2));
+      data.back() << 9, 10;
+      data.push_back(Eigen::VectorXd(2));
+      data.back() << 10, 9;
+      data.push_back(Eigen::VectorXd(2));
+      data.back() << 10, 10;
+      data.push_back(Eigen::VectorXd(2));
+      data.back() << 13, 13;
+
+      // 聚类
+      auto clusters = cluster::kmeans(data, 3);
+
+      // 打印结果
+      for (int i = 0; i < clusters.size(); ++i) {
+          std::cout << "Cluster " << i << ": " << std::endl;
+          for (auto cluster : clusters[i]) {
+            std::cout << cluster << std::endl;
+          }
+          std::cout << std::endl;
+      }
+
+      return 0;
 }
