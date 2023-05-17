@@ -38,4 +38,4 @@ cmake -B build && cmake --build build
 mv build/cluster ./cluster
 
 echo -e "${GREEN}Build complete. Check the 'build' directory for the generated executable.${RESET}"
-echo -e "${GREEN}Congradulation! Let's run the executable with './build/cluster <dataset>'${RESET}"
+echo -e "${GREEN}Congradulation! Let's run the executable with './cluster <dataset>'${RESET}"
