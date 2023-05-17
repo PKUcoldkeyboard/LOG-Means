@@ -78,6 +78,10 @@ LOG-Means算法是一种新型、简化的、高效、对大数据集和大搜�
 ## 测试与验证
 本项目将使用一系列测试用例对每个模块进行单元测试，以确保它们的正确性和有效性。测试用例应涵盖正常情况、边缘情况和异常情况。此外，我们还将使用一些具有不同特征和规模的真实数据集进行集成测试，以评估算法的性能和准确性。
 
+<div align="center">
+  <img src="image/dataset.png">
+</div>
+
 ## 项目协作者
 <a href="https://github.com/PKUcoldkeyboard/LOG-Means/graphs/contributors">
   <img src="https://contrib.rocks./image?repo=PKUcoldkeyboard/LOG-Means" />
