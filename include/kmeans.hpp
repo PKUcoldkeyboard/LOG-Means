@@ -5,13 +5,14 @@
 #include <omp.h>
 #include "random.hpp"
 #include "utils.hpp"
+#include "spdlog_common.h"
 
 // 定义簇类型
 typedef std::pair<Eigen::VectorXd, std::vector<Eigen::VectorXd>> Cluster;
 
 class KMeans {
 public:
-    KMeans(int k, int max_iterations = 100) : k(k), max_iterations(max_iterations) {}
+    KMeans(int k, int max_iterations = 1000) : k(k), max_iterations(max_iterations) {}
     /**
      * 聚类
      * 参数：
@@ -19,15 +20,33 @@ public:
      * 返回：聚类结果
     */
     std::pair<std::vector<Cluster>, std::vector<int>> fit(std::vector<Eigen::VectorXd> &data) {
+        SPDLOG_INFO("Starting KMeans clustering, cluster number: {}, max iterations: {}", k, max_iterations);
         int n = data.size();
         int dim = data[0].size();
 
-        // 使用随机数初始化质心
+        // KMeans++初始化质心
         std::vector<Eigen::VectorXd> centroids;
         Random random;
-        for (int i = 0; i < k; ++i) {
-            centroids.emplace_back(data[random.randint(0, n - 1)]);
+        centroids.emplace_back(data[random.randint(0, n - 1)]);
+        for (int i = 1; i < k; i++) {
+            // 计算所有点到最近质心的距离平方
+            std::vector<double> dists(n, 0);
+            for (int j = 0; j < n; j++) {
+                double minDist = std::numeric_limits<double>::max();
+                for (int l = 0; l < i; l++) {
+                    double dist = utils::euclidean_distance(data[j], centroids[l]);
+                    if (dist < minDist) {
+                        minDist = dist;
+                    }
+                }
+                dists[j] = minDist * minDist;
+            }
+            // 根据距离平方作为权重随机选取下一个质心
+            int index = random.rand_descrete(dists.begin(), dists.end());
+            centroids.emplace_back(data[index]);
         }
+
+        SPDLOG_INFO("Done random init centroids");
 
         // 初始化标签向量
         std::vector<int> labels(n, 0);
@@ -82,6 +101,7 @@ public:
                 }
             }
             if (converged) {
+                SPDLOG_INFO("KMeans clustering converged after {} iterations", iter);
                 break;
             }
         }
@@ -91,6 +111,8 @@ public:
         for (int i = 0; i < k; i++) {
             resultCluster[i] = std::make_pair(centroids[i], clusters[i]);
         }
+
+        SPDLOG_INFO("Done KMeans clustering");
 
         return {resultCluster, labels};
     }

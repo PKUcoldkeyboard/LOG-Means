@@ -1,21 +1,36 @@
 #ifndef __RANDOM_HPP__
 #define __RANDOM_HPP__
-#include <cstdlib>
-#include <ctime>
+#include <random>
 
 class Random {
 public:
-    Random() {
-        srand((unsigned int) time(NULL));
-    }
+    Random() : eng(std::random_device{}()), uniform_dist(0, 1) {}
     float randn() {
         // 生成0到1之间的浮点数
-        return static_cast<float>(rand()) / RAND_MAX;
+        return uniform_dist(eng);
     }
+
     int randint(int a, int b) {
         // 生成[a, b]的随机整数
-        return rand() % (b - a + 1) + a;
+        std::uniform_int_distribution<> dist(a, b);
+        return dist(eng);
     }
+
+    // 用于生成具有离散分布的随机整数
+    template <typename Iter>
+    int rand_descrete(Iter begin, Iter end) {
+        std::discrete_distribution<> dist(begin, end);
+        return dist(eng);
+    }
+
+    // 提供引擎供外部使用
+    std::mt19937 &get_engine() {
+        return eng;
+    }
+    
+private:
+    std::mt19937 eng;
+    std::uniform_real_distribution<float> uniform_dist;
 };
 
 #endif // __RANDOM_HPP__

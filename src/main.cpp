@@ -36,6 +36,9 @@ int main(int argc, const char *argv[]) {
         std::cout << label << " ";
     }
     std::cout << std::endl;
+
+    // 打印SSE
+    std::cout << "SSE：" << utils::compute_sse(result.first) << std::endl;
     
     return 0;
 }
