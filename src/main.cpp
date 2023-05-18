@@ -3,45 +3,39 @@
 
 int main(int argc, const char *argv[]) {
       // kmeans测试数据集
-      std::vector<Eigen::VectorXd> data;
-      data.push_back(Eigen::VectorXd(2));
-      data.back() << 1, 1;
-      data.push_back(Eigen::VectorXd(2));
-      data.back() << 1, 2;
-      data.push_back(Eigen::VectorXd(2));
-      data.back() << 2, 1;
-      data.push_back(Eigen::VectorXd(2));
-      data.back() << 2, 2;
-      data.push_back(Eigen::VectorXd(2));
-      data.back() << 5, 5;
-      data.push_back(Eigen::VectorXd(2));
-      data.back() << 5, 6;
-      data.push_back(Eigen::VectorXd(2));
-      data.back() << 6, 5;
-      data.push_back(Eigen::VectorXd(2));
-      data.back() << 6, 6;
-      data.push_back(Eigen::VectorXd(2));
-      data.back() << 9, 9;
-      data.push_back(Eigen::VectorXd(2));
-      data.back() << 9, 10;
-      data.push_back(Eigen::VectorXd(2));
-      data.back() << 10, 9;
-      data.push_back(Eigen::VectorXd(2));
-      data.back() << 10, 10;
-      data.push_back(Eigen::VectorXd(2));
-      data.back() << 13, 13;
+    std::vector<Eigen::VectorXd> data;
+    data.push_back(Eigen::VectorXd(2));
+    data.back() << 1.0, 1.0;
+    data.push_back(Eigen::VectorXd(2));
+    data.back() << 1.5, 2.0;
+    data.push_back(Eigen::VectorXd(2));
+    data.back() << 3.0, 4.0;
+    data.push_back(Eigen::VectorXd(2));
+    data.back() << 5.0, 7.0;
+    data.push_back(Eigen::VectorXd(2));
+    data.back() << 3.5, 5.0;
+    data.push_back(Eigen::VectorXd(2));
+    data.back() << 4.5, 5.0;
+    data.push_back(Eigen::VectorXd(2));
+    data.back() << 3.5, 4.5;
 
-      // 聚类
-      auto clusters = cluster::kmeans(data, 3);
+    // 聚类
+    KMeans kmeans(2);
+    auto result = kmeans.fit(data);
 
-      // 打印结果
-      for (int i = 0; i < clusters.size(); ++i) {
-          std::cout << "Cluster " << i << ": " << std::endl;
-          for (auto cluster : clusters[i]) {
-            std::cout << cluster << std::endl;
-          }
-          std::cout << std::endl;
-      }
-
-      return 0;
+    // 打印结果
+    std::cout << "聚类结果：" << std::endl;
+    for (int i = 0; i < result.first.size(); ++i) {
+        std::cout << "簇" << i << "：" << std::endl;
+        for (auto &point : result.first[i].second) {
+            std::cout << point.transpose() << std::endl;
+        }
+    }
+    std::cout << "标签：" << std::endl;
+    for (auto &label : result.second) {
+        std::cout << label << " ";
+    }
+    std::cout << std::endl;
+    
+    return 0;
 }

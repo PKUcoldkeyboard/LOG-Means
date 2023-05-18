@@ -41,8 +41,7 @@ void utils::write_data_to_file(const std::string& filename, const Eigen::MatrixX
 }
 
 double utils::euclidean_distance(const Eigen::VectorXd& point1, const Eigen::VectorXd& point2) {
-    // @TODO
-    return 0.0;
+    return (point1 - point2).norm();
 }
 
 #endif // __UTILS_HPP__
