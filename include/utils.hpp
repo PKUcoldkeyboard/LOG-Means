@@ -39,6 +39,13 @@ namespace utils {
      *
     */
     double compute_sse(const std::vector<Cluster>& clusters);
+    /**
+     * 计算算法估计类与真实类数量的误差
+     * 参数：
+     * - k: 算法估计类
+     * - c: 真实类数量
+    */
+    double compute_delta(int k, int c);
 
 } // namespace utils
 
@@ -65,6 +72,10 @@ double utils::compute_sse(const std::vector<Cluster>& clusters) {
         }
     }
     return sse;
+}
+
+double utils::compute_delta(int k, int c) {
+    return std::abs(k - c) / static_cast<double>(c);
 }
 
 #endif // __UTILS_HPP__

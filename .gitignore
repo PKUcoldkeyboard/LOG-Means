@@ -38,4 +38,7 @@ CMakeLists.txt.user
 *~
 .DS_Store
 
+datasets.zip
+datasets/
+
 cluster
