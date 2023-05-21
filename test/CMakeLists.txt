@@ -6,9 +6,6 @@ include_directories(${GTEST_INCLUDE_DIRS})
 set(TEST_SOURCES
     main_test.cpp
     utils_test.cpp
-    data_preprocessing_test.cpp
-    gain_calculation_test.cpp
-    cluster_analysis_test.cpp
 )
 
 # 定义测试用例

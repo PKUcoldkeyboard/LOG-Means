@@ -13,6 +13,9 @@ typedef std::pair<Eigen::VectorXd, std::vector<Eigen::VectorXd>> Cluster;
 class KMeans {
 public:
     KMeans(int k, int max_iterations = 1000) : k(k), max_iterations(max_iterations) {}
+    void set_k(int k) { 
+        this->k = k; 
+    }
     /**
      * 聚类
      * 参数：
