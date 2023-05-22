@@ -1,8 +1,12 @@
 #ifndef __UTILS_HPP__
 #define __UTILS_HPP__
 
-#include<string>
-#include<eigen3/Eigen/Dense>
+#include <fstream>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <sstream>
+#include <eigen3/Eigen/Dense>
+#include "spdlog_common.h"
 #pragma once
 typedef std::pair<Eigen::VectorXd, std::vector<Eigen::VectorXd>> Cluster;
 
@@ -10,18 +14,14 @@ namespace utils {
     /**
      * 从文件中读取数据并存储为Eigen矩阵
      * 参数：
-     *  - filename: 文件名
+     *  - location: 数据集文件路径
+     *  - num: 数据集中的数据数量
+     *  - dim: 数据集中的数据维度
+     *  - classes: 数据集中的类别数量
      * 返回：从文件中读取的数据矩阵
      */
-    Eigen::MatrixXd read_data_from_file(const std::string& filename);
-
-    /**
-     * 将矩阵数据写入文件
-     * 参数：
-     *  - filename: 文件名
-     *  - data: 要写入文件的数据矩阵
-     */
-    void write_data_to_file(const std::string& filename, const Eigen::MatrixXd& data);
+    template<typename Scalar>
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> read_data_from_file(std::string location, int num, int dim);
 
     /**
      * 计算两点之间的欧氏距离
@@ -49,13 +49,78 @@ namespace utils {
 
 } // namespace utils
 
-Eigen::MatrixXd utils::read_data_from_file(const std::string& filenmae) {
-    // @TODO
-    return Eigen::MatrixXd();
-}
+template<typename Scalar>
+Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> utils::read_data_from_file(std::string location, int num, int dim) {
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> data(num, dim);
 
-void utils::write_data_to_file(const std::string& filename, const Eigen::MatrixXd& data) {
-    // @TODO
+    // 打开文件
+    int fd = open(location.c_str(), O_RDONLY);
+    if (fd == -1) {
+        SPDLOG_ERROR("Failed to open file {}", location);
+        exit(1);
+    }
+
+    // 获取文件大小
+    struct stat sb;
+    if (fstat(fd, &sb) == -1) {
+        SPDLOG_ERROR("Failed to get file size");
+        exit(1);
+    }
+
+    // mmap读取文件
+    char *addr = static_cast<char*>(mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0));
+    if (addr == MAP_FAILED) {
+        SPDLOG_ERROR("Failed to mmap file");
+        exit(1);
+    }
+
+    // 遍历每一行
+    std::istringstream iss(addr);
+    for (int i = 0; i < num; i++) {
+        std::string line;
+        if (!std::getline(iss, line)) {
+            SPDLOG_ERROR("Failed to read line {}", i);
+            exit(1);
+        }
+        // 解析每一行的数据
+        std::istringstream iss_line(line);
+        for (int j = 0; j < dim; j++) {
+            std::string val;
+            if (!std::getline(iss_line, val, ',')) {
+                SPDLOG_ERROR("Failed to read value ({}, {})", i, j);
+                exit(1);
+            }
+            // 将数据转换为浮点数并存储到 Eigen 矩阵中
+            try {
+                if constexpr (std::is_same<Scalar, float>::value) {
+                    data(i, j) = std::stof(val);
+                } else if constexpr (std::is_same<Scalar, double>::value) {
+                    data(i, j) = std::stod(val);
+                } else {
+                    SPDLOG_ERROR("Unsupported data type");
+                    exit(1);
+                }
+            } catch (std::invalid_argument& e) {
+                SPDLOG_ERROR("Failed to convert value ({}, {}, {}) to float due to invalid argument error", i, j, val);
+                exit(1);
+            } catch (std::out_of_range& e) {
+                // 存储的数据超出了浮点数的范围
+                if constexpr (std::is_same<Scalar, float>::value) {
+                    data(i, j) = 0.0f;
+                } else if constexpr (std::is_same<Scalar, double>::value) {
+                    data(i, j) = 0.0;
+                }
+                continue;
+            }
+        }
+    }
+
+    // 释放内存映射
+    if (munmap(addr, sb.st_size) == -1) {
+        SPDLOG_ERROR("Failed to munmap file");
+        exit(1);
+    }
+    return data;
 }
 
 double utils::euclidean_distance(const Eigen::VectorXd& point1, const Eigen::VectorXd& point2) {

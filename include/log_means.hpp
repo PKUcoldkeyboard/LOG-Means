@@ -15,8 +15,6 @@ public:
      *
     */
     int run(std::vector<Eigen::VectorXd> &data, int k_low, int k_high, int epsilon = 0);
-private:
-
 };
 
 int LogMeans::run(std::vector<Eigen::VectorXd> &data, int k_low, int k_high, int epsilon) {

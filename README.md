@@ -48,7 +48,14 @@ LOG-Means算法是一种新型、简化的、高效、对大数据集和大搜�
 
 - 运行项目
 ```
-./cluster <dataset>
+// 运行帮助
+./cluster --help
+
+// 对所有数据集进行簇数目估计
+./cluster -a 
+
+// 对指定数据集进行簇数目估计
+./cluster -d <dataset>
 ```
 
 ## 模块细节
@@ -81,6 +88,14 @@ LOG-Means算法是一种新型、简化的、高效、对大数据集和大搜�
 <div align="center">
   <img src="image/dataset.png">
 </div>
+
+每个数据集的规模为：
+1. Avila 包含了 10,430 个数据点，每个点有 10 个维度，总计 12 个类
+2. DSDD 包含了 58,509 个数据点，每个点有 48 个维度，总计 11 个类
+3. MNIST 包含了 60,000 个数据点，每个点有 784 个维度，总计 10 个类
+4. KDD 包含了 4,898,431 个数据点，每个点有 34 个维度，总计 23 个类
+5. KITSUNE 包含了 21,017,597 个数据点，每个点有 115 个维度，总计 9 个类
+
 
 ## 项目协作者
 <a href="https://github.com/PKUcoldkeyboard/LOG-Means/graphs/contributors">

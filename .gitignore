@@ -39,6 +39,11 @@ CMakeLists.txt.user
 .DS_Store
 
 datasets.zip
-datasets/
+datasets/KITSUNE.txt
+datasets/KITSUNE10.txt
+datasets/DSDD.txt
+datasets/KDD.txt
+datasets/MNIST.txt
+datasets/Avila.txt
 
 cluster

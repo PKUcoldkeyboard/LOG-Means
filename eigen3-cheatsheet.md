@@ -47,25 +47,6 @@
 
 Eigen3 库中的 `Eigen::MatrixXd::Random(rows, cols)` 函数可以生成一个大小为 rows x cols 的随机矩阵，元素取值范围为 [-1, 1]。
 
-### Eigen3 文件读写
-
-Eigen3 库中的 `Eigen::MatrixXd::read(filename)` 和 `Eigen::MatrixXd::write(filename)` 函数可以读取和写入矩阵到文本文件。例如：
-
-```cpp
-Eigen::MatrixXd A;
-A = Eigen::MatrixXd::Random(3, 3);
-
-// 写入矩阵到文本文件
-A.write("matrix.txt", Eigen::MatrixXd::StreamPrecision);
-
-// 从文本文件读取矩阵
-Eigen::MatrixXd B;
-B.read("matrix.txt");
-
-```
-
-其中 `StreamPrecision` 是一个常量，用于指定写入文件时的数字精度。如果需要更高的精度，可以使用 `FullPrecision`。
-
 ### Eigen3 线性代数函数
 
 Eigen3 库提供了很多常用的线性代数函数，如求解线性方程组、求解特征值和特征向量、SVD 分解等。以下是一些常用的函数：
