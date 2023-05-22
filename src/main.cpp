@@ -6,6 +6,7 @@
 #include "argparse.hpp"
 #include "utils.hpp"
 #include "spdlog_common.h"
+#include "kmeans.hpp"
 #include <eigen3/Eigen/Dense>
 
 using namespace indicators;
@@ -21,6 +22,8 @@ struct MyArgs: public argparse::Args {
 };
 
 int main(int argc, const char *argv[]) {
+    Eigen::setNbThreads(4);
+    Eigen::initParallel(); 
     MyArgs args = argparse::parse<MyArgs>(argc, argv);
     util::inifile ini("config.ini");
     if (args.all) {
@@ -84,26 +87,33 @@ int main(int argc, const char *argv[]) {
         SPDLOG_INFO("Dimension: {}", dim);
         SPDLOG_INFO("Number of classes: {}", classes);
 
-        Eigen::MatrixXf data = utils::read_data_from_file<float>(location, num, dim);
-        std::cout << data.block(0, 0, 10, dim) << std::endl;
-        // auto job = [&bar, &dataset, &location, &num, &dim, &classes]() {
-        //     // 读取数据集
-        //     Eigen::MatrixXd data = utils::read_data_from_file(location, num, dim);
+        auto job = [&bar, &dataset, &location, &num, &dim, &classes]() {
+            // 计算花费时间
+            auto start = std::chrono::steady_clock::now();
+            // 读取数据集
+            auto data = utils::read_data_from_file<float>(location, num, dim);
 
-        //     // 打印data前十行, std
-        //     std::cout << data.block(0, 0, 10, dim) << std::endl;
+            KMeans kmeans(classes);
+            auto result = kmeans.fit<float>(data);
 
-        //     bar.mark_as_completed();
-        //     SPDLOG_INFO("Done Running dataset {}", dataset);
-        // };
-        // std::thread job_completion_thread(job);
+            // 打印一下聚类结果
+            for (int i = 0; i < 10; i++) {
+                std::cout << result[i] << std::endl;
+            }
 
-        // while (!bar.is_completed()) {
-        //     bar.tick();
-        //     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        // }
-        // job_completion_thread.join();
-        // show_console_cursor(true);
+            bar.mark_as_completed();
+            SPDLOG_INFO("Done Running dataset {}", dataset);
+            auto end = std::chrono::steady_clock::now();
+            SPDLOG_INFO("Time elapsed: {}ms", std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
+        };
+        std::thread job_completion_thread(job);
+
+        while (!bar.is_completed()) {
+            bar.tick();
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        job_completion_thread.join();
+        show_console_cursor(true);
     }
     return 0;
 }

@@ -4,11 +4,10 @@
 #include <fstream>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <omp.h>
 #include <sstream>
 #include <eigen3/Eigen/Dense>
 #include "spdlog_common.h"
-#pragma once
-typedef std::pair<Eigen::VectorXd, std::vector<Eigen::VectorXd>> Cluster;
 
 namespace utils {
     /**
@@ -30,7 +29,8 @@ namespace utils {
      *  - point2: 点2
      * 返回：两点之间的欧氏距离
      */
-    double euclidean_distance(const Eigen::VectorXd& point1, const Eigen::VectorXd& point2);
+    template<typename Scalar>
+    Scalar euclidean_distance(const Eigen::RowVector<Scalar, Eigen::Dynamic>& point1, const Eigen::RowVector<Scalar, Eigen::Dynamic>& point2);
     /**
      * 计算聚类结果的SSE
      * 参数：
@@ -38,7 +38,8 @@ namespace utils {
      * 返回：SSE
      *
     */
-    double compute_sse(const std::vector<Cluster>& clusters);
+    template<typename Scalar>
+    Scalar compute_sse(const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& data, const std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>>& centroids);
     /**
      * 计算算法估计类与真实类数量的误差
      * 参数：
@@ -52,7 +53,6 @@ namespace utils {
 template<typename Scalar>
 Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> utils::read_data_from_file(std::string location, int num, int dim) {
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> data(num, dim);
-
     // 打开文件
     int fd = open(location.c_str(), O_RDONLY);
     if (fd == -1) {
@@ -70,7 +70,8 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> utils::read_data_from_file
     // mmap读取文件
     char *addr = static_cast<char*>(mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0));
     if (addr == MAP_FAILED) {
-        SPDLOG_ERROR("Failed to mmap file");
+        SPDLOG_ERROR("Failed to mmap file {}", location);
+        close(fd);
         exit(1);
     }
 
@@ -104,7 +105,7 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> utils::read_data_from_file
                 SPDLOG_ERROR("Failed to convert value ({}, {}, {}) to float due to invalid argument error", i, j, val);
                 exit(1);
             } catch (std::out_of_range& e) {
-                // 存储的数据超出了浮点数的范围
+                // 存储的数据超出了浮点数的范围，视为0
                 if constexpr (std::is_same<Scalar, float>::value) {
                     data(i, j) = 0.0f;
                 } else if constexpr (std::is_same<Scalar, double>::value) {
@@ -120,21 +121,31 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> utils::read_data_from_file
         SPDLOG_ERROR("Failed to munmap file");
         exit(1);
     }
+    close(fd);
+
     return data;
 }
 
-double utils::euclidean_distance(const Eigen::VectorXd& point1, const Eigen::VectorXd& point2) {
+template<typename Scalar>
+Scalar utils::euclidean_distance(const Eigen::RowVector<Scalar, Eigen::Dynamic>& point1, const Eigen::RowVector<Scalar, Eigen::Dynamic>& point2) {
     return (point1 - point2).norm();
 }
 
-double utils::compute_sse(const std::vector<Cluster>& clusters) {
-    double sse = 0.0;
-    for (const auto& cluster : clusters) {
-        const auto& centroid = cluster.first;
-        const auto& points = cluster.second;
-        for (const auto& point : points) {
-            sse += utils::euclidean_distance(centroid, point) * utils::euclidean_distance(centroid, point);
+template<typename Scalar>
+Scalar utils::compute_sse(const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& data, const std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>>& centroids) {
+    Scalar sse = 0.0;
+    int n = data.rows();
+
+    #pragma omp parallel for reduction(+:sse)
+    for (int i = 0; i < n; i++) {
+        Scalar minDist = euclidean_distance<Scalar>(data.row(i), centroids[0]);
+        for (int j = 1; j < centroids.size(); j++) {
+            Scalar dist = euclidean_distance(data.row(i), centroids[j]);
+            if (dist < minDist) {
+                minDist = dist;
+            }
         }
+        sse += minDist;
     }
     return sse;
 }
