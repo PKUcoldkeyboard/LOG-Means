@@ -27,6 +27,13 @@ LOG-Means算法是一种新型、简化的、高效、对大数据集和大搜�
 </div>
 
 - k-means||算法[2]
+  - 随机选择一个中心点
+  - 计算满足概率条件的多个候选中心点C（可能大于k个）
+    - 迭代r次，<del>r=logn</del>(r=5，因为实际实验证明5次重复取样就能得到较好的聚类初始中心)
+    - 根据probability，每次迭代取样O(k)个样本
+    - 最后得到O(kr)个样本
+  - 给C中所有点赋予权重值，这个权重值表示距离x点最近的点的个数。
+  - 使用带有权重的K-Means++算法从C中筛选出k个中心点
 
 <div align="center">
   <img src="image/Scalable-KMeans++.jpg" style="width: 70%">
