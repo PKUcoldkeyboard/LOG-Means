@@ -2,12 +2,12 @@ import numpy as np
 from sklearn.cluster import KMeans
 
 # 读取数据集
-dataset_path = "../datasets/MNIST.txt"
+dataset_path = "../datasets/KDD.txt"
 data = np.loadtxt(dataset_path, delimiter=",")
 
 # 数据集信息
 num_data_points, num_dimensions = data.shape
-num_clusters_range = range(2, 25)  # k 取值范围为 2 到 24
+num_clusters_range = range(2, 47)  # k 取值范围为 2 到 24
 
 # 使用 K-Means II 聚类并计算 SSE
 sse_results = []

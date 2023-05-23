@@ -26,7 +26,12 @@ LOG-Means算法是一种新型、简化的、高效、对大数据集和大搜�
   <img src="image/algorithm.png">
 </div>
 
-- KMeansⅡ算法[2]
+- k-means||算法[2]
+
+<div align="center">
+  <img src="image/Scalable-KMeans++.jpg">
+</div>
+
 - Elbow算法[3]
 
 ## 环境需求

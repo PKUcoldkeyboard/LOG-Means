@@ -9,7 +9,7 @@
 
 class KMeans {
 public:
-    KMeans(int k, int max_iterations = 20) : k(k), max_iterations(max_iterations) {}
+    KMeans(int k, int max_iterations = 20, unsigned int seed = 42) : k(k), max_iterations(max_iterations), random(seed) {}
     void set_k(int k) { 
         this->k = k; 
     }
@@ -44,6 +44,7 @@ private:
     int k;
     // max iterations
     int max_iterations;
+    Random random;
 };
 
 template<typename Scalar>
@@ -53,7 +54,6 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
 
     // 随机选取第一个质心
     std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> centroids;
-    Random random;
     int c0 = random.randint(0, n - 1);
     centroids.emplace_back(data.row(c0));
 
