@@ -28,8 +28,8 @@ LOG-Means算法是一种新型、简化的、高效、对大数据集和大搜�
 
 - k-means||算法[2]
 
-<div align="center" style="width: 80%">
-  <img src="image/Scalable-KMeans++.jpg">
+<div align="center">
+  <img src="image/Scalable-KMeans++.jpg" style="width: 70%">
 </div>
 
 - Elbow算法[3]
