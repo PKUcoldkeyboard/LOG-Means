@@ -7,18 +7,19 @@
 #include "utils.hpp"
 #include "spdlog_common.h"
 #include "kmeans.hpp"
+#include "log_means.hpp"
 #include <eigen3/Eigen/Dense>
 
 using namespace indicators;
 
 // 需要加载的数据集，对应ini文件中的section
 std::vector<std::string> datasets = {
-    "Avila", "DSDD", "KDD", "MNIST", "KITSUNE"
+    "Avila", "DSDD", "KDD", "MNIST", "KITSUNE10"
 };
 
 struct MyArgs: public argparse::Args {
     bool &all = flag("a,all", "Run all datasets");
-    std::string &dataset = kwarg("d,dataset", "Dataset name [Avila/DSDD/KDD/KITSUNE/MNIST] ").set_default("Avila");
+    std::string &dataset = kwarg("d,dataset", "Dataset name [Avila/DSDD/KDD/KITSUNE10/KITSUNE/MNIST] ").set_default("Avila");
 };
 
 int main(int argc, const char *argv[]) {
@@ -50,9 +51,7 @@ int main(int argc, const char *argv[]) {
             auto classes = ini.section(dataset).get_int("classes");
             
             // 读取数据集
-
-            // 预估聚类数
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000 + cnt * 200));
+            auto data = utils::read_data_from_file<float>(location, num, dim);
 
             cnt++;
             if (cnt == 5) {
@@ -93,13 +92,10 @@ int main(int argc, const char *argv[]) {
             // 读取数据集
             auto data = utils::read_data_from_file<float>(location, num, dim);
 
-            KMeans kmeans(classes);
-            auto result = kmeans.fit<float>(data);
-
-            // 打印一下聚类结果
-            for (int i = 0; i < 10; i++) {
-                std::cout << result[i] << std::endl;
-            }
+            // 预估聚类数
+            LogMeans log_means;
+            auto k = log_means.run(data, 2, 2 * classes);
+            SPDLOG_INFO("Estimated number of clusters: {}", k);
 
             bar.mark_as_completed();
             SPDLOG_INFO("Done Running dataset {}", dataset);

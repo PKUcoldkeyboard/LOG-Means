@@ -9,7 +9,7 @@
 
 class KMeans {
 public:
-    KMeans(int k, int max_iterations = 100) : k(k), max_iterations(max_iterations) {}
+    KMeans(int k, int max_iterations = 20) : k(k), max_iterations(max_iterations) {}
     void set_k(int k) { 
         this->k = k; 
     }
@@ -20,7 +20,16 @@ public:
      * @return: 初始化后的质心
     */
     template<typename Scalar>
-    std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> init_centroids(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> &data);
+    std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> init_centroids(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> &data);
+
+    /**
+     * @brief 计算点到最近质心的距离
+     * @param centroids: 质心集合
+     * @param point: 数据点
+     * @return: 点到最近质心的距离平方
+    */
+    template<typename Scalar>
+    Scalar point_cost(const std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> &centroids, const Eigen::RowVector<Scalar, Eigen::Dynamic> &point);
 
     /**
      * @brief KMeans聚类
@@ -28,7 +37,7 @@ public:
      * @return: 聚类后的质心
     */
     template<typename Scalar>
-    std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> fit(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> &data);
+    std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> fit(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> &data);
 
 private:
     // cluster number
@@ -38,7 +47,7 @@ private:
 };
 
 template<typename Scalar>
-std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> &data) {
+std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> &data) {
     int n = data.rows();
     int dim = data.cols();
 
@@ -48,92 +57,174 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
     int c0 = random.randint(0, n - 1);
     centroids.emplace_back(data.row(c0));
 
-    std::vector<Scalar> dists(n, 0);
-    int cnt = 1;
-    while (cnt < k) {
-        // 计算所有点到已有质心的最短距离平方, 作为选择下一个质心的权重
+    // KMeansⅡ选取方法
+    // r为超参数，这里直接使用spark中的值, l=2k
+    const int r = 5;
+    const int l = 2 * k;
+    for (int round = 0; round < r; round++) {
+        std::vector<Scalar> minDists(n, 0);
+        Scalar sum = 0;
+        #pragma omp parallel for reduction(+:sum)
         for (int i = 0; i < n; i++) {
-            Scalar minDist = (data.row(i) - centroids[0]).squaredNorm();
-            for (int j = 1; j < cnt; j++) {
-                Scalar dist = (data.row(i) - centroids[j]).squaredNorm();
-                if (dist < minDist) {
-                    minDist = dist;
-                }
-            }
-            dists[i] = minDist;
+            minDists[i] = point_cost<Scalar>(centroids, data.row(i));
+            sum += minDists[i];
         }
-        // 根据距离的平方权重随机选择新的质心
-        int newCentroidId = random.rand_descrete(dists.begin(), dists.end());
-        centroids.emplace_back(data.row(newCentroidId));
-        cnt++;
+        // 加权概率选取质心
+        for (int i = 0; i < n; i++) {
+            Scalar prob = l * minDists[i] / sum;
+            if (random.randn() < prob) {
+                centroids.emplace_back(data.row(i));
+            }
+        }
+    }
+
+    // 候选质心数小于k，则返回所有质心
+    if (centroids.size() <= k) {
+        return centroids;
+    }
+
+    // 可能大于k个质心，继续后续处理，先计算出权重：表示距离x点最近的点的个数
+    std::vector<int> weights(centroids.size(), 0);
+    #pragma omp parallel for
+    for (int i = 0; i < centroids.size(); i++) {
+        int minIndex = 0;
+        Scalar minDist = (centroids[i] - centroids[0]).squaredNorm();
+        for (int j = 1; j < centroids.size(); j++) {
+            Scalar dist = (centroids[i] - centroids[j]).squaredNorm();
+            if (dist < minDist) {
+                minDist = dist;
+                minIndex = j;
+            }
+        }
+        weights[minIndex]++;
+    }
+
+    // recluster过程：根据weights权重选取k个质心
+    std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> newCentroids;
+    // 先选取一个质心
+    c0 = random.rand_descrete(weights.begin(), weights.end());
+    newCentroids.emplace_back(centroids[c0]);
+
+    // 根据距离和权重选择其余的质心
+    for (int i = 1; i < k; i++) {
+        std::vector<Scalar> minDists(centroids.size(), 0);
+        // 计算每个候选质心到已选质心集合的最小距离
+        #pragma omp parallel for
+        for (int j = 0; j < centroids.size(); j++) {
+            minDists[j] = point_cost<Scalar>(newCentroids, centroids[j]);
+        }
+        // 计算每个候选质心被选为新质心的权重（距离 * 候选质心权重）
+        std::vector<Scalar> probs(centroids.size(), 0);
+        Scalar sum = 0;
+        #pragma omp parallel for reduction(+:sum)
+        for (int j = 0; j < centroids.size(); j++) {
+            probs[j] = minDists[j] * weights[j];
+            sum += probs[j];
+        }
+        // 根据权重选择新的质心
+        int c = random.rand_descrete(probs.begin(), probs.end());
+        newCentroids.emplace_back(centroids[c]);
     }
 
     return centroids;
 }
 
 template<typename Scalar>
-std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::fit(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> &data) {
-    SPDLOG_INFO("Starting KMeans clustering, cluster number: {}, max iterations: {}", k, max_iterations);
+Scalar KMeans::point_cost(const std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> &centroids, const Eigen::RowVector<Scalar, Eigen::Dynamic> &point) {
+    Scalar minDist = (point - centroids[0]).squaredNorm();
+    for (int i = 1; i < centroids.size(); i++) {
+        Scalar dist = (point - centroids[i]).squaredNorm();
+        if (dist < minDist) {
+            minDist = dist;
+        }
+    }
+    return minDist;
+}
+
+template<typename Scalar>
+std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::fit(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> &data) {
     int n = data.rows();
     int dim = data.cols();
 
-    // KMeans++初始化质心
+    // KMeansⅡ初始化质心
+    // auto start = std::chrono::system_clock::now();
+
     std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> centroids = init_centroids<Scalar>(data);
+
+    // auto end = std::chrono::system_clock::now();
+    // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    // std::cout << "init centroids cost " << double(duration.count()) << " ms" << std::endl;
+
     std::vector<std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>>> clusters(k, std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>>());
     std::vector<int> labels(n, 0);
     for (int iter = 0; iter < max_iterations; iter++) {
-        clusters.clear();
-        clusters.resize(k, std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>>());
-        
+        // 清空clusters
+        for (int i = 0; i < k; i++) {
+            clusters[i].clear();
+        }
+
         // 指派点到最近的质心
-        #pragma omp parallel for num_threads(4)
+        #pragma omp parallel for
         for (int i = 0; i < n; i++) {
             const auto &point = data.row(i);
-            Scalar minDist = utils::euclidean_distance<Scalar>(point, centroids[0]);
+            Scalar minDist = (point - centroids[0]).squaredNorm();
             int minDistId = 0;
             for (int j = 1; j < k; j++) {
-                Scalar dist = utils::euclidean_distance<Scalar>(point, centroids[j]);
+                Scalar dist = (point - centroids[j]).squaredNorm();
                 if (dist < minDist) {
                     minDist = dist;
                     minDistId = j;
                 }
             }
-            #pragma omp critical 
-            {
-                clusters[minDistId].emplace_back(point);
-                labels[i] = minDistId;
-            }
+            labels[i] = minDistId;
         }
+
+        // 构建簇
+        for (int i = 0; i < n; i++) {
+            clusters[labels[i]].emplace_back(data.row(i));
+        }
+
         // 更新每个簇的质心
         std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> oldCentroids = centroids;
+        #pragma omp parallel for
         for (int i = 0; i < k; i++) {
             // 避免空簇
             if (clusters[i].empty()) {
+                // 将空簇的质心重新初始化为所有点中距离其它质心最远的点
+                int maxDistId = 0;
+                Scalar maxDist = 0;
+                for (int j = 0; j < n; j++) {
+                    Scalar dist = point_cost<Scalar>(oldCentroids, data.row(j));
+                    if (dist > maxDist) {
+                        maxDist = dist;
+                        maxDistId = j;
+                    }
+                }
+                centroids[i] = data.row(maxDistId);
                 continue;
             }
             // 计算clusters[i]中所有点的均值
-            centroids[i] = clusters[i][0];
-            for (int j = 1; j < clusters[i].size(); j++) {
-                centroids[i] += clusters[i][j];
+            Eigen::RowVector<Scalar, Eigen::Dynamic> sum(dim);
+            sum.setZero();
+            for (const auto &point : clusters[i]) {
+                sum += point;
             }
-            centroids[i] /= clusters[i].size();
+            centroids[i] = sum / clusters[i].size();
         }
 
         bool converged = true;
         // 检查质心是否变化
         for (int i = 0; i < k; i++) {
-            if ((centroids[i] - oldCentroids[i]).norm() > 1e-4) {
+            // 1e-4：scikit-learn中的标准
+            if ((centroids[i] - oldCentroids[i]).squaredNorm() > 1e-4) {
                 converged = false;
                 break;
             }
         }
         if (converged) {
-            SPDLOG_INFO("KMeans clustering converged at iteration {}", iter);
             break;
         }
     }
-
-    SPDLOG_INFO("Finished KMeans clustering");
     return centroids;
 }
 
