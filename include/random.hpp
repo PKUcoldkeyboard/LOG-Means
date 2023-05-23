@@ -5,6 +5,9 @@
 class Random {
 public:
     Random() : eng(std::random_device{}()), uniform_dist(0, 1) {}
+
+    Random(unsigned int seed) : eng(seed), uniform_dist(0, 1) {}
+    
     float randn() {
         // 生成0到1之间的浮点数
         return uniform_dist(eng);
