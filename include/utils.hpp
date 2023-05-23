@@ -138,9 +138,9 @@ Scalar utils::compute_sse(const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dyn
 
     #pragma omp parallel for reduction(+:sse)
     for (int i = 0; i < n; i++) {
-        Scalar minDist = euclidean_distance<Scalar>(data.row(i), centroids[0]);
+        Scalar minDist = (data.row(i) - centroids[0]).squaredNorm();
         for (int j = 1; j < centroids.size(); j++) {
-            Scalar dist = euclidean_distance(data.row(i), centroids[j]);
+            Scalar dist = (data.row(i) - centroids[j]).squaredNorm();
             if (dist < minDist) {
                 minDist = dist;
             }

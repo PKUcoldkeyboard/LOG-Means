@@ -9,7 +9,7 @@
 
 class KMeans {
 public:
-    KMeans(int k, int max_iterations = 100) : k(k), max_iterations(max_iterations) {}
+    KMeans(int k, int max_iterations = 20) : k(k), max_iterations(max_iterations) {}
     void set_k(int k) { 
         this->k = k; 
     }
@@ -67,7 +67,6 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
         centroids.emplace_back(data.row(newCentroidId));
         cnt++;
     }
-
     return centroids;
 }
 
