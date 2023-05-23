@@ -17,7 +17,7 @@ public:
      *
     */
     template<typename Scalar>
-    int run(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> &data, int k_low, int k_high, int epsilon = 0);
+    int run(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> &data, int k_low, int k_high, int epsilon = 0);
 
 private:
     bool directly_adjacent(int k_low, int k_high) {
@@ -60,14 +60,14 @@ private:
 };
 
 template<typename Scalar>
-int LogMeans::run(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> &data, int k_low, int k_high, int epsilon) {
+int LogMeans::run(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> &data, int k_low, int k_high, int epsilon) {
     int k_min = -1;
     Scalar min_sse = std::numeric_limits<Scalar>::max();
     for (int k = k_low; k <= k_high; k++) {
         KMeans kmeans(k);
         auto centroids = kmeans.fit<Scalar>(data);
         auto sse = utils::compute_sse<Scalar>(data, centroids);
-        std::cout << "k: " << k << ", sse: " << sse << std::endl;
+        std::cout << "K =  " << k << ", SSE = " << sse << std::endl;
         if (sse < min_sse) {
             min_sse = sse;
             k_min = k;

@@ -20,7 +20,7 @@ namespace utils {
      * 返回：从文件中读取的数据矩阵
      */
     template<typename Scalar>
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> read_data_from_file(std::string location, int num, int dim);
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> read_data_from_file(std::string location, int num, int dim);
 
     /**
      * 计算两点之间的欧氏距离
@@ -39,7 +39,7 @@ namespace utils {
      *
     */
     template<typename Scalar>
-    Scalar compute_sse(const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& data, const std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>>& centroids);
+    Scalar compute_sse(const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>& data, const std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>>& centroids);
     /**
      * 计算算法估计类与真实类数量的误差
      * 参数：
@@ -51,8 +51,8 @@ namespace utils {
 } // namespace utils
 
 template<typename Scalar>
-Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> utils::read_data_from_file(std::string location, int num, int dim) {
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> data(num, dim);
+Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> utils::read_data_from_file(std::string location, int num, int dim) {
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data(num, dim);
     // 打开文件
     int fd = open(location.c_str(), O_RDONLY);
     if (fd == -1) {
@@ -132,7 +132,7 @@ Scalar utils::euclidean_distance(const Eigen::RowVector<Scalar, Eigen::Dynamic>&
 }
 
 template<typename Scalar>
-Scalar utils::compute_sse(const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& data, const std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>>& centroids) {
+Scalar utils::compute_sse(const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>& data, const std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>>& centroids) {
     Scalar sse = 0.0;
     int n = data.rows();
 
