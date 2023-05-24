@@ -19,6 +19,8 @@ std::vector<std::string> datasets = {
 
 struct MyArgs: public argparse::Args {
     bool &all = flag("a,all", "Run all datasets");
+    // 大范围搜索模式
+    bool &search = flag("s,search", "Large search space mode - k: [2, 2c] or k: [2, 10c]");
     std::string &dataset = kwarg("d,dataset", "Dataset name [Avila/DSDD/KDD/KITSUNE10/KITSUNE/MNIST] ").set_default("Avila");
 };
 
@@ -86,7 +88,7 @@ int main(int argc, const char *argv[]) {
         SPDLOG_INFO("Dimension: {}", dim);
         SPDLOG_INFO("Number of classes: {}", classes);
 
-        auto job = [&bar, &dataset, &location, &num, &dim, &classes]() {
+        auto job = [&bar, &dataset, &location, &num, &dim, &classes, &args]() {
             // 计算花费时间
             auto start = std::chrono::steady_clock::now();
             // 读取数据集
@@ -94,7 +96,9 @@ int main(int argc, const char *argv[]) {
             
             // 预估聚类数
             LogMeans log_means;
-            auto k = log_means.run(data, 2, 2 * classes);
+            int k_low = 2;
+            int k_high = args.search ? 10 * classes : 2 * classes;
+            auto k = log_means.run(data, k_low, k_high);
             SPDLOG_INFO("Estimated number of clusters: {}", k);
 
             bar.mark_as_completed();

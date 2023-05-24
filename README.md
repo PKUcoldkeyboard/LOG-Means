@@ -59,8 +59,13 @@ LOG-Means算法是一种新型、简化的、高效、对大数据集和大搜�
 // 对所有数据集进行簇数目估计
 ./cluster -a 
 
-// 对指定数据集进行簇数目估计
+// 对指定数据集进行簇数目估计，可以不指定，默认为Avila数据集
 ./cluster -d <dataset>
+
+// 指定大范围搜索模式，将搜索空间设置为[2, 10c]，默认为[2, 2c]
+./cluster -d <dataset> -s
+
+./cluster -a -s
 ```
 
 ## 测试与验证
@@ -90,5 +95,7 @@ This project is licensed under the Apache 2.0 License. See the LICENSE file for 
 
 ## 参考文献
 [1] Manuel Fritz, Michael Behringer, Holger Schwarz. LOG-Means: Efficiently Estimating the Number of Clusters in Large Datasets. PVLDB, 13(11): 2118-2131, 2020. DOI: https://doi.org/10.14778/3407790.3407813
+
 [2] B. Bahmani, B. Moseley, A. Vattani, R. Kumar, andS. Vassilvitskii. Scalable K-Means++. PVLDB,5(7):622–633, 2012.
+
 [3] R. L. Thorndike. Who belongs in the family? Psychometrika, 18(4):267–276, 12 1953.
