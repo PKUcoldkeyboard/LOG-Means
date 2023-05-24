@@ -5,6 +5,7 @@ include_directories(${GTEST_INCLUDE_DIRS})
 # 添加测试源文件
 set(TEST_SOURCES
     main_test.cpp
+    utils_test.cpp
 )
 
 # 定义测试用例

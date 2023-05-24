@@ -91,7 +91,7 @@ int main(int argc, const char *argv[]) {
             auto start = std::chrono::steady_clock::now();
             // 读取数据集
             auto data = utils::read_data_from_file<float>(location, num, dim);
-
+            
             // 预估聚类数
             LogMeans log_means;
             auto k = log_means.run(data, 2, 2 * classes);
