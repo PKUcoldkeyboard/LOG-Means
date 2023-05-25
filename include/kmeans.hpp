@@ -15,7 +15,7 @@ public:
     }
 
     /**
-     * @brief KMeans++初始化质心
+     * @brief KMeans||初始化质心
      * @param data: 数据集
      * @return: 初始化后的质心
     */
@@ -29,7 +29,7 @@ public:
      * @return: 点到最近质心的距离平方
     */
     template<typename Scalar>
-    double point_cost(const std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> &centroids, const Eigen::RowVector<Scalar, Eigen::Dynamic> &point);
+    Scalar point_cost(const std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> &centroids, const Eigen::RowVector<Scalar, Eigen::Dynamic> &point);
 
     /**
      * @brief KMeans聚类
@@ -63,7 +63,7 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
     const int r = 5;
     const int l = 2 * k;
     for (int round = 0; round < r; round++) {
-        std::vector<double> minDists(n, 0);
+        std::vector<Scalar> minDists(n, 0);
         // Scalar sum = 0; 无论float还是double都用double存和，因为KITSUNE可能会溢出
         double sum = 0;
         #pragma omp parallel for reduction(+:sum)
@@ -73,7 +73,7 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
         }
         // 加权概率选取质心
         for (int i = 0; i < n; i++) {
-            double prob = l * minDists[i] / sum;
+            Scalar prob = l * minDists[i] / sum;
             if (random.randn() < prob) {
                 centroids.emplace_back(data.row(i));
             }
@@ -82,7 +82,7 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
 
     // 候选质心数小于k，则返回所有质心
     if (centroids.size() <= k) {
-        SPDLOG_INFO("centroids size: {} <= {}", centroids.size(), k);
+        // SPDLOG_INFO("centroids size: {} <= {}", centroids.size(), k);
         return centroids;
     }
 
@@ -91,9 +91,9 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
     #pragma omp parallel for
     for (int i = 0; i < centroids.size(); i++) {
         int minIndex = 0;
-        double minDist = (centroids[i] - centroids[0]).squaredNorm();
+        Scalar minDist = (centroids[i] - centroids[0]).squaredNorm();
         for (int j = 1; j < centroids.size(); j++) {
-            double dist = (centroids[i] - centroids[j]).squaredNorm();
+            Scalar dist = (centroids[i] - centroids[j]).squaredNorm();
             if (dist < minDist) {
                 minDist = dist;
                 minIndex = j;
@@ -110,14 +110,14 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
 
     // 根据距离和权重选择其余的质心
     for (int i = 1; i < k; i++) {
-        std::vector<double> minDists(centroids.size(), 0);
+        std::vector<Scalar> minDists(centroids.size(), 0);
         // 计算每个候选质心到已选质心集合的最小距离
         #pragma omp parallel for
         for (int j = 0; j < centroids.size(); j++) {
             minDists[j] = point_cost<Scalar>(newCentroids, centroids[j]);
         }
         // 计算每个候选质心被选为新质心的权重（距离 * 候选质心权重）
-        std::vector<double> probs(centroids.size(), 0);
+        std::vector<Scalar> probs(centroids.size(), 0);
         double sum = 0;
         #pragma omp parallel for reduction(+:sum)
         for (int j = 0; j < centroids.size(); j++) {
@@ -132,15 +132,12 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
 }
 
 template<typename Scalar>
-double KMeans::point_cost(const std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> &centroids, const Eigen::RowVector<Scalar, Eigen::Dynamic> &point) {
-    double minDist = (point - centroids[0]).squaredNorm();
-    for (int i = 1; i < centroids.size(); i++) {
-        double dist = (point - centroids[i]).squaredNorm();
-        if (dist < minDist) {
-            minDist = dist;
-        }
+Scalar KMeans::point_cost(const std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> &centroids, const Eigen::RowVector<Scalar, Eigen::Dynamic> &point) {
+    Eigen::RowVector<Scalar, Eigen::Dynamic> dists(centroids.size());
+    for (int i = 0; i < centroids.size(); i++) {
+        dists(i) = (centroids[i] - point).squaredNorm();
     }
-    return minDist;
+    return dists.minCoeff();
 }
 
 template<typename Scalar>
