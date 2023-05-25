@@ -88,7 +88,6 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
 
     // 可能大于k个质心，继续后续处理，先计算出权重：表示距离x点最近的点的个数
     std::vector<int> weights(centroids.size(), 0);
-    #pragma omp parallel for
     for (int i = 0; i < centroids.size(); i++) {
         int minIndex = 0;
         Scalar minDist = (centroids[i] - centroids[0]).squaredNorm();
@@ -103,41 +102,41 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
     }
 
     // recluster过程：根据weights权重选取k个质心
-    std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> newCentroids;
+    std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> newCentroids(k, Eigen::RowVector<Scalar, Eigen::Dynamic>(dim));
     // 先选取一个质心
     c0 = random.rand_descrete(weights.begin(), weights.end());
-    newCentroids.emplace_back(centroids[c0]);
+    newCentroids[0] = centroids[c0];
 
     // 根据距离和权重选择其余的质心
     for (int i = 1; i < k; i++) {
         std::vector<Scalar> minDists(centroids.size(), 0);
         // 计算每个候选质心到已选质心集合的最小距离
-        #pragma omp parallel for
         for (int j = 0; j < centroids.size(); j++) {
             minDists[j] = point_cost<Scalar>(newCentroids, centroids[j]);
         }
         // 计算每个候选质心被选为新质心的权重（距离 * 候选质心权重）
         std::vector<Scalar> probs(centroids.size(), 0);
-        double sum = 0;
-        #pragma omp parallel for reduction(+:sum)
         for (int j = 0; j < centroids.size(); j++) {
             probs[j] = minDists[j] * weights[j];
-            sum += probs[j];
         }
+
         // 根据权重选择新的质心
         int c = random.rand_descrete(probs.begin(), probs.end());
-        newCentroids.emplace_back(centroids[c]);
+        newCentroids[i] = centroids[c];
     }
     return centroids;
 }
 
 template<typename Scalar>
 Scalar KMeans::point_cost(const std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> &centroids, const Eigen::RowVector<Scalar, Eigen::Dynamic> &point) {
-    Eigen::RowVector<Scalar, Eigen::Dynamic> dists(centroids.size());
-    for (int i = 0; i < centroids.size(); i++) {
-        dists(i) = (centroids[i] - point).squaredNorm();
+    Scalar minDist = (point - centroids[0]).squaredNorm();
+    for (int i = 1; i < centroids.size(); i++) {
+        Scalar dist = (point - centroids[i]).squaredNorm();
+        if (dist < minDist) {
+            minDist = dist;
+        }
     }
-    return dists.minCoeff();
+    return minDist;
 }
 
 template<typename Scalar>
@@ -146,17 +145,10 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::fit(Eigen::Matrix<
     int dim = data.cols();
 
     // KMeansⅡ初始化质心
-    // auto start = std::chrono::system_clock::now();
-
-    std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> centroids = init_centroids<Scalar>(data);
+    auto centroids = init_centroids<Scalar>(data);
     k = centroids.size();
 
-    // auto end = std::chrono::system_clock::now();
-    // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    // std::cout << "init centroids cost " << double(duration.count()) << " ms" << std::endl;
-
     std::vector<std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>>> clusters(k, std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>>());
-    std::vector<int> labels(n, 0);
     for (int iter = 0; iter < max_iterations; iter++) {
         // 清空clusters
         for (int i = 0; i < k; i++) {
@@ -176,17 +168,12 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::fit(Eigen::Matrix<
                     minDistId = j;
                 }
             }
-            labels[i] = minDistId;
-        }
-
-        // 构建簇
-        for (int i = 0; i < n; i++) {
-            clusters[labels[i]].emplace_back(data.row(i));
+            #pragma omp critical
+            clusters[minDistId].emplace_back(point);
         }
 
         // 更新每个簇的质心
         std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> oldCentroids = centroids;
-        #pragma omp parallel for
         for (int i = 0; i < k; i++) {
             // 避免空簇
             if (clusters[i].empty()) {
@@ -204,8 +191,7 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::fit(Eigen::Matrix<
                 continue;
             }
             // 计算clusters[i]中所有点的均值
-            Eigen::RowVector<Scalar, Eigen::Dynamic> sum(dim);
-            sum.setZero();
+            Eigen::RowVector<Scalar, Eigen::Dynamic> sum = Eigen::RowVector<Scalar, Eigen::Dynamic>::Zero(dim);
             for (const auto &point : clusters[i]) {
                 sum += point;
             }
