@@ -29,7 +29,7 @@ public:
      * @return: 点到最近质心的距离平方
     */
     template<typename Scalar>
-    Scalar point_cost(const std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> &centroids, const Eigen::RowVector<Scalar, Eigen::Dynamic> &point);
+    double point_cost(const std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> &centroids, const Eigen::RowVector<Scalar, Eigen::Dynamic> &point);
 
     /**
      * @brief KMeans聚类
@@ -58,12 +58,14 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
     centroids.emplace_back(data.row(c0));
 
     // KMeansⅡ选取方法
-    // r为超参数，这里直接使用spark中的值, l=2k
+    // r为超参数，一般取lgn, spark默认取5， l=2k
+    // const int r = (int)std::log10(n);
     const int r = 5;
     const int l = 2 * k;
     for (int round = 0; round < r; round++) {
-        std::vector<Scalar> minDists(n, 0);
-        Scalar sum = 0;
+        std::vector<double> minDists(n, 0);
+        // Scalar sum = 0; 无论float还是double都用double存和，因为KITSUNE可能会溢出
+        double sum = 0;
         #pragma omp parallel for reduction(+:sum)
         for (int i = 0; i < n; i++) {
             minDists[i] = point_cost<Scalar>(centroids, data.row(i));
@@ -71,7 +73,7 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
         }
         // 加权概率选取质心
         for (int i = 0; i < n; i++) {
-            Scalar prob = l * minDists[i] / sum;
+            double prob = l * minDists[i] / sum;
             if (random.randn() < prob) {
                 centroids.emplace_back(data.row(i));
             }
@@ -80,6 +82,7 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
 
     // 候选质心数小于k，则返回所有质心
     if (centroids.size() <= k) {
+        SPDLOG_INFO("centroids size: {} <= {}", centroids.size(), k);
         return centroids;
     }
 
@@ -88,9 +91,9 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
     #pragma omp parallel for
     for (int i = 0; i < centroids.size(); i++) {
         int minIndex = 0;
-        Scalar minDist = (centroids[i] - centroids[0]).squaredNorm();
+        double minDist = (centroids[i] - centroids[0]).squaredNorm();
         for (int j = 1; j < centroids.size(); j++) {
-            Scalar dist = (centroids[i] - centroids[j]).squaredNorm();
+            double dist = (centroids[i] - centroids[j]).squaredNorm();
             if (dist < minDist) {
                 minDist = dist;
                 minIndex = j;
@@ -107,15 +110,15 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
 
     // 根据距离和权重选择其余的质心
     for (int i = 1; i < k; i++) {
-        std::vector<Scalar> minDists(centroids.size(), 0);
+        std::vector<double> minDists(centroids.size(), 0);
         // 计算每个候选质心到已选质心集合的最小距离
         #pragma omp parallel for
         for (int j = 0; j < centroids.size(); j++) {
             minDists[j] = point_cost<Scalar>(newCentroids, centroids[j]);
         }
         // 计算每个候选质心被选为新质心的权重（距离 * 候选质心权重）
-        std::vector<Scalar> probs(centroids.size(), 0);
-        Scalar sum = 0;
+        std::vector<double> probs(centroids.size(), 0);
+        double sum = 0;
         #pragma omp parallel for reduction(+:sum)
         for (int j = 0; j < centroids.size(); j++) {
             probs[j] = minDists[j] * weights[j];
@@ -125,15 +128,14 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
         int c = random.rand_descrete(probs.begin(), probs.end());
         newCentroids.emplace_back(centroids[c]);
     }
-
     return centroids;
 }
 
 template<typename Scalar>
-Scalar KMeans::point_cost(const std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> &centroids, const Eigen::RowVector<Scalar, Eigen::Dynamic> &point) {
-    Scalar minDist = (point - centroids[0]).squaredNorm();
+double KMeans::point_cost(const std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> &centroids, const Eigen::RowVector<Scalar, Eigen::Dynamic> &point) {
+    double minDist = (point - centroids[0]).squaredNorm();
     for (int i = 1; i < centroids.size(); i++) {
-        Scalar dist = (point - centroids[i]).squaredNorm();
+        double dist = (point - centroids[i]).squaredNorm();
         if (dist < minDist) {
             minDist = dist;
         }
@@ -150,6 +152,7 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::fit(Eigen::Matrix<
     // auto start = std::chrono::system_clock::now();
 
     std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> centroids = init_centroids<Scalar>(data);
+    k = centroids.size();
 
     // auto end = std::chrono::system_clock::now();
     // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);

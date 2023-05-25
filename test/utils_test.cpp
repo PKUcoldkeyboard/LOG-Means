@@ -86,6 +86,13 @@ TEST_F(UtilsTest, TestReadDataFromFile3) {
     }
 }
 
+TEST_F(UtilsTest, TestReadDataFromFile4) {
+    // 读取数据集
+    auto data = utils::read_data_from_file<float>("datasets/KITSUNE10.txt", 1868224, 115);
+    ASSERT_EQ(data.rows(), 1868224);
+    ASSERT_EQ(data.cols(), 115);
+}
+
 TEST_F(UtilsTest, TestEuclideanDistance1) {
     // 计算欧氏距离，case1: 相同点的距离为0
     for (int i = 0; i < data.rows(); i++) {
