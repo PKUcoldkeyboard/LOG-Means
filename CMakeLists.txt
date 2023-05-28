@@ -31,12 +31,8 @@ set(SOURCES
 # 添加头文件目录
 include_directories(include)
 
-# spdlog头文件
+# 第三方头文件
 include_directories(third-party)
-
-# Eigen库引入
-find_package(Eigen3 REQUIRED)
-include_directories(${EIGEN3_INCLUDE_DIR})
 
 # Openmp引入
 find_package(OpenMP REQUIRED)
@@ -49,10 +45,6 @@ endif()
 # 定义可执行文件
 add_executable(cluster ${SOURCES})
 
-# 引入gtest库
-find_package(GTest REQUIRED)
-include_directories(${GTEST_INCLUDE_DIRS})
-
-# 添加测试目录
-enable_testing()
+# 添加测试
+add_subdirectory(third-party/googletest-1.13.0)
 add_subdirectory(test)
