@@ -342,6 +342,8 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> utils::if
 template<typename Scalar>
 Scalar utils::euclidean_distance(const Eigen::RowVector<Scalar, Eigen::Dynamic>& point1, const Eigen::RowVector<Scalar, Eigen::Dynamic>& point2) {
     return (point1 - point2).norm();
+    // Spark mllib Kmeans距离优化，lowerBoundOfSqDist
+    // return point1.norm() - point2.norm();
 }
 
 template<typename Scalar>

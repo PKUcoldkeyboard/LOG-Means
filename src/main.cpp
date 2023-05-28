@@ -96,9 +96,10 @@ int main(int argc, const char *argv[]) {
             
             // 预估聚类数
             LogMeans log_means;
-            int k_low = 2;
+            // 搜索范围为 [0.5c, 2c]
+            int k_low = classes / 2;
             int k_high = args.search ? 10 * classes : 2 * classes;
-            auto k = log_means.run(data, k_low, k_high);
+            auto k = log_means.run<float>(data, k_low, k_high);
             SPDLOG_INFO("Estimated number of clusters: {}", k);
 
             bar.mark_as_completed();

@@ -9,7 +9,7 @@
 
 class KMeans {
 public:
-    KMeans(int k, int max_iterations = 20, unsigned int seed = 42) : k(k), max_iterations(max_iterations), random(seed) {}
+    KMeans(int k, int maxIter = 20, int initSteps = 2, float tol = 0.0001) : k(k), maxIter(maxIter), initSteps(initSteps), tol(tol) {}
     void set_k(int k) { 
         this->k = k; 
     }
@@ -40,10 +40,14 @@ public:
     std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> fit(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> &data);
 
 private:
-    // cluster number
+    // The number of clusters to create.
     int k;
-    // max iterations
-    int max_iterations;
+    // max number of iterations (>= 0)
+    int maxIter;
+    // The number of steps for k-means|| initialization mode. Must be > 0.
+    int initSteps;
+    // the convergence tolerance for iterative algorithms (>= 0).
+    float tol;
     Random random;
 };
 
@@ -58,11 +62,9 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
     centroids.emplace_back(data.row(c0));
 
     // KMeansⅡ选取方法
-    // r为超参数，一般取lgn, spark默认取5， l=2k
-    // const int r = (int)std::log10(n);
-    const int r = 5;
+    // initSteps为超参数，一般取lgn, spark默认取2， l=2k
     const int l = 2 * k;
-    for (int round = 0; round < r; round++) {
+    for (int round = 0; round < initSteps; round++) {
         std::vector<Scalar> minDists(n, 0);
         // Scalar sum = 0; 无论float还是double都用double存和，因为KITSUNE可能会溢出
         double sum = 0;
@@ -90,9 +92,9 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
     std::vector<int> weights(centroids.size(), 0);
     for (int i = 0; i < centroids.size(); i++) {
         int minIndex = 0;
-        Scalar minDist = (centroids[i] - centroids[0]).squaredNorm();
+        Scalar minDist = utils::euclidean_distance<Scalar>(centroids[i], centroids[0]);
         for (int j = 1; j < centroids.size(); j++) {
-            Scalar dist = (centroids[i] - centroids[j]).squaredNorm();
+            Scalar dist = utils::euclidean_distance<Scalar>(centroids[i], centroids[j]);
             if (dist < minDist) {
                 minDist = dist;
                 minIndex = j;
@@ -129,9 +131,9 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
 
 template<typename Scalar>
 Scalar KMeans::point_cost(const std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> &centroids, const Eigen::RowVector<Scalar, Eigen::Dynamic> &point) {
-    Scalar minDist = (point - centroids[0]).squaredNorm();
+    Scalar minDist = utils::euclidean_distance<Scalar>(point, centroids[0]);
     for (int i = 1; i < centroids.size(); i++) {
-        Scalar dist = (point - centroids[i]).squaredNorm();
+        Scalar dist = utils::euclidean_distance<Scalar>(point, centroids[i]);
         if (dist < minDist) {
             minDist = dist;
         }
@@ -149,7 +151,7 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::fit(Eigen::Matrix<
     k = centroids.size();
 
     std::vector<std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>>> clusters(k, std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>>());
-    for (int iter = 0; iter < max_iterations; iter++) {
+    for (int iter = 0; iter < maxIter; iter++) {
         // 清空clusters
         for (int i = 0; i < k; i++) {
             clusters[i].clear();
@@ -159,10 +161,10 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::fit(Eigen::Matrix<
         #pragma omp parallel for
         for (int i = 0; i < n; i++) {
             const auto &point = data.row(i);
-            Scalar minDist = (point - centroids[0]).squaredNorm();
+            Scalar minDist = utils::euclidean_distance<Scalar>(point, centroids[0]);
             int minDistId = 0;
             for (int j = 1; j < k; j++) {
-                Scalar dist = (point - centroids[j]).squaredNorm();
+                Scalar dist = utils::euclidean_distance<Scalar>(point, centroids[j]);
                 if (dist < minDist) {
                     minDist = dist;
                     minDistId = j;
@@ -177,18 +179,9 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::fit(Eigen::Matrix<
         for (int i = 0; i < k; i++) {
             // 避免空簇
             if (clusters[i].empty()) {
-                // 将空簇的质心重新初始化为所有点中距离其它质心最远的点
-                int maxDistId = 0;
-                Scalar maxDist = 0;
-                for (int j = 0; j < n; j++) {
-                    Scalar dist = point_cost<Scalar>(oldCentroids, data.row(j));
-                    if (dist > maxDist) {
-                        maxDist = dist;
-                        maxDistId = j;
-                    }
-                }
-                centroids[i] = data.row(maxDistId);
-                continue;
+                // 随机选择其它非空簇的质心作为新质心
+                // todo
+                // continue;
             }
             // 计算clusters[i]中所有点的均值
             Eigen::RowVector<Scalar, Eigen::Dynamic> sum = Eigen::RowVector<Scalar, Eigen::Dynamic>::Zero(dim);
@@ -202,7 +195,7 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::fit(Eigen::Matrix<
         // 检查质心是否变化
         for (int i = 0; i < k; i++) {
             // 1e-4：scikit-learn中的标准
-            if ((centroids[i] - oldCentroids[i]).squaredNorm() > 1e-4) {
+            if (utils::euclidean_distance<Scalar>(oldCentroids[i], centroids[i]) > 1e-4) {
                 converged = false;
                 break;
             }

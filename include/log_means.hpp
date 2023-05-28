@@ -7,6 +7,12 @@
 
 class LogMeans {
 public:
+    template<typename Scalar>
+    Scalar kmeans_sse(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> &data, int k) {
+        KMeans kmeans(k);
+        auto centroids = kmeans.fit<Scalar>(data);
+        return utils::compute_sse<Scalar>(data, centroids);
+    }
     /**
      * 预估数据集簇的数量
      * @param data 数据集
@@ -17,63 +23,60 @@ public:
      *
     */
     template<typename Scalar>
-    int run(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> &data, int k_low, int k_high, int epsilon = 0);
+    int run(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> &data, int k_low, int k_high, Scalar epsilon = 0);
 
 private:
     bool directly_adjacent(int k_low, int k_high) {
-        return k_low + 1 == k_high || k_low == k_high + 1 || k_low == k_high;
-    }
-    
-    template<typename Scalar>
-    int find_max (std::unordered_map<int, Scalar> &map) {
-        Scalar max = 0;
-        int key = 0;
-        for (auto & [k, v] : map) {
-            if (v > max) {
-                max = v;
-                key = k;
-            }
-        }
-        return key;
-    }
-
-    template<typename Scalar>
-    int find_adjacent(std::unordered_map<int, Scalar> &map, int k_high) {
-        // 找到map中key比k小的最接近khigh的key
-        int key = 0;
-        Scalar min = 0;
-        for (auto & [k, v] : map) {
-            if (k < k_high) {
-                if (min == 0) {
-                    min = v;
-                    key = k;
-                } else {
-                    if (v < min) {
-                        min = v;
-                        key = k;
-                    }
-                }
-            }
-        }
-        return key;   
+        return k_low + 1 == k_high;
     }
 };
 
 template<typename Scalar>
-int LogMeans::run(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> &data, int k_low, int k_high, int epsilon) {
-    int k_min = -1;
-    Scalar min_sse = std::numeric_limits<Scalar>::max();
-    for (int k = k_low; k <= k_high; k++) {
-        KMeans kmeans(k);
-        auto centroids = kmeans.fit<Scalar>(data);
-        auto sse = utils::compute_sse<Scalar>(data, centroids);
-        std::cout << "K =  " << k << ", SSE = " << sse << std::endl;
-        if (sse < min_sse) {
-            min_sse = sse;
-            k_min = k;
+int LogMeans::run(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> &data, int k_low, int k_high, Scalar epsilon) {
+    k_low--;
+    std::unordered_map<int, Scalar> K, M;
+    Scalar sseLow = kmeans_sse<Scalar>(data, k_low);
+    Scalar sseHigh = kmeans_sse<Scalar>(data, k_high);
+    K[k_low] = sseLow;
+    K[k_high] = sseHigh;
+    while (k_low < k_high && !directly_adjacent(k_low, k_high)) {
+        int k_mid = (k_low + k_high) / 2;
+        std::cout << "k_Low=" << k_low << ",k_mid=" << k_mid << ",k_high=" << k_high << std::endl;
+        Scalar sseMid = kmeans_sse(data, k_mid);
+        K[k_mid] = sseMid;
+        Scalar radioLeft = sseLow / sseMid;
+        Scalar radioRight = sseMid / sseHigh;
+        std::cout << "radioLeft=" << radioLeft << ", radioRight=" << radioRight << std::endl;
+        M[k_mid] = radioLeft;
+        M[k_high] = radioRight;
+        int temp_klow = k_low; // 1
+        int temp_khigh = k_high; // 24
+        Scalar maxRadio = 0;
+        for (const auto &[k, v]: M) {
+            if (v > maxRadio) {
+                maxRadio = v;
+                k_high = k;
+            }
+        }
+        for (int i = k_high - 1; i >= 0; i--) {
+            if (K.count(i)) {
+                k_low = i;
+                break;
+            }
+        }
+        sseHigh = K[k_high];
+        sseLow = K[k_low];
+    }
+    int result = 0;
+    Scalar maxRadio = 0;
+    std::cout << "k_low: " << k_low << ", k_high: " << k_high << std::endl;
+    for (const auto &[k, v]: M) {
+        if (k >= k_low && k <= k_high && v > maxRadio) {
+            maxRadio = v;
+            result = k;
         }
     }
-    return k_min;
+    return result;
 }
 
 #endif // __LOG__MEANS__HPP__
