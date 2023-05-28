@@ -8,7 +8,7 @@
 #include "spdlog_common.h"
 #include "kmeans.hpp"
 #include "log_means.hpp"
-#include <eigen3/Eigen/Dense>
+#include "eigen-3.4.0/Eigen/Dense"
 
 using namespace indicators;
 

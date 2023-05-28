@@ -7,7 +7,7 @@
 #include <omp.h>
 #include <sstream>
 #include <unordered_map>
-#include <eigen3/Eigen/Dense>
+#include "eigen-3.4.0/Eigen/Dense"
 #include "spdlog_common.h"
 
 namespace utils {

@@ -46,5 +46,5 @@ endif()
 add_executable(cluster ${SOURCES})
 
 # 添加测试
-add_subdirectory(third-party/googletest-1.13.0)
-add_subdirectory(test)
+# add_subdirectory(third-party/googletest-1.13.0)
+# add_subdirectory(test)

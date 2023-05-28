@@ -1,6 +1,6 @@
 #ifndef __KMEANS_HPP__
 #define __KMEANS_HPP__
-#include <eigen3/Eigen/Dense>
+#include "eigen-3.4.0/Eigen/Dense"
 #include <vector>
 #include <omp.h>
 #include "random.hpp"
