@@ -21,7 +21,7 @@ public:
 
     // 用于生成具有离散分布的随机整数
     template <typename Iter>
-    int rand_descrete(Iter begin, Iter end) {
+    int rand_discrete(Iter begin, Iter end) {
         std::discrete_distribution<> dist(begin, end);
         return dist(eng);
     }

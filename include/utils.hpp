@@ -366,7 +366,7 @@ Scalar utils::compute_sse(const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dyn
 }
 
 double utils::compute_delta(int k, int c) {
-    return std::abs(k - c) / static_cast<double>(c);
+    return static_cast<double>(k - c) / static_cast<double>(c);
 }
 
 #endif // __UTILS_HPP__

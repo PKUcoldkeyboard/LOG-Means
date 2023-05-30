@@ -16,6 +16,22 @@ public:
     }
 
     /**
+     * @brief Random初始化质心
+     * @param data: 数据集
+     * @return: 初始化后的质心
+    */
+    template<typename Scalar>
+    std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> random_init_centroids(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> &data);
+
+    /**
+     * @brief KMeans++初始化质心
+     * @param data: 数据集
+     * @return: 初始化后的质心
+    */
+    template<typename Scalar>
+    std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> kmeans_plus_plus_init_centroids(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> &data);
+
+    /**
      * @brief KMeans||初始化质心
      * @param data: 数据集
      * @return: 初始化后的质心
@@ -51,6 +67,44 @@ private:
     double tol;
     Random random;
 };
+
+template<typename Scalar>
+std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::random_init_centroids(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> &data) {
+    int n = data.rows();
+    int dim = data.cols();
+    std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> centroids;
+    for (int i = 0; i < k; i++) {
+        centroids.emplace_back(data.row(random.randint(0, n - 1)));
+    }
+    return centroids;
+}
+
+template<typename Scalar>
+std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::kmeans_plus_plus_init_centroids(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> &data) {
+    int n = data.rows();
+    int dim = data.cols();
+    std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> centroids;
+    centroids.emplace_back(data.row(random.randint(0, n - 1)));
+    for (int i = 1; i < k; i++) {
+        std::vector<Scalar> minDists(n, 0);
+        Scalar sum = 0;
+        #pragma omp parallel for reduction(+:sum)
+        for (int j = 0; j < n; j++) {
+            Scalar minDist = point_cost<Scalar>(centroids, data.row(j));
+            minDists[j] = minDist * minDist;
+            sum += minDists[j];
+        }
+        Scalar r = static_cast<Scalar>(random.randn());
+        Scalar prob = r * sum;
+        int j = 0;
+        while (prob > minDists[j]) {
+            prob -= minDists[j];
+            j++;
+        }
+        centroids.emplace_back(data.row(j));
+    }
+    return centroids;
+}
 
 template<typename Scalar>
 std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> &data) {
@@ -145,10 +199,10 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
         weights[minIndex]++;
     }
 
-    // recluster过程：根据weights权重选取k个质心
+    // recluster过程：根据weights权重调用K-Means++选取k个质心
     std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> newCentroids(k, Eigen::RowVector<Scalar, Eigen::Dynamic>(dim));
     // 先选取一个质心
-    c0 = random.rand_descrete(weights.begin(), weights.end());
+    c0 = random.rand_discrete(weights.begin(), weights.end());
     newCentroids[0] = centroids[c0];
 
     // 根据距离和权重选择其余的质心
@@ -166,11 +220,11 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
         std::vector<Scalar> probs(centroids.size(), 0);
         #pragma omp parallel for
         for (int j = 0; j < centroids.size(); j++) {
-            probs[j] = l * minDists[j] * weights[j] / sum;
+            probs[j] = minDists[j] * weights[j] / sum;
         }
 
         // 根据权重选择新的质心
-        int c = random.rand_descrete(probs.begin(), probs.end());
+        int c = random.rand_discrete(probs.begin(), probs.end());
         newCentroids[i] = centroids[c];
     }
     return newCentroids;

@@ -69,6 +69,9 @@ int main(int argc, const char *argv[]) {
             auto end = std::chrono::steady_clock::now();
             SPDLOG_INFO("Time elapsed: {}ms", std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
 
+            float delta = utils::compute_delta(k, classes);
+            SPDLOG_INFO("Delta: {:.5f}", delta);
+
             cnt++;
             if (cnt == 5) {
                 bar.set_option(option::PrefixText{"Done running 5/5 "});
@@ -120,6 +123,9 @@ int main(int argc, const char *argv[]) {
             SPDLOG_INFO("Done Running dataset {}", dataset);
             auto end = std::chrono::steady_clock::now();
             SPDLOG_INFO("Time elapsed: {}ms", std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
+
+            float delta = utils::compute_delta(k, classes);
+            SPDLOG_INFO("Delta: {:.5f}", delta);
         };
         std::thread job_completion_thread(job);
 
