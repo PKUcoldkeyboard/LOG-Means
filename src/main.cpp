@@ -51,9 +51,23 @@ int main(int argc, const char *argv[]) {
             auto num = ini.section(dataset).get_int("num");
             auto dim = ini.section(dataset).get_int("dim");
             auto classes = ini.section(dataset).get_int("classes");
-            
+
+            auto start = std::chrono::steady_clock::now();
             // 读取数据集
-            auto data = utils::read_data_from_file<float>(location, num, dim);
+            auto data = utils::ifs_read_data_from_file<float>(location, num, dim);
+
+            // 预估聚类数
+            LogMeans log_means;
+            // 搜索范围为 [0.5c, 2c]
+            int k_low = classes / 2;
+            int k_high = args.search ? 10 * classes : 2 * classes;
+            auto k = log_means.run<float>(data, k_low, k_high);
+            SPDLOG_INFO("Estimated number of clusters: {}", k);
+
+            SPDLOG_INFO("Done Running dataset {}", dataset);
+            
+            auto end = std::chrono::steady_clock::now();
+            SPDLOG_INFO("Time elapsed: {}ms", std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
 
             cnt++;
             if (cnt == 5) {
@@ -92,7 +106,7 @@ int main(int argc, const char *argv[]) {
             // 计算花费时间
             auto start = std::chrono::steady_clock::now();
             // 读取数据集
-            auto data = utils::read_data_from_file<float>(location, num, dim);
+            auto data = utils::ifs_read_data_from_file<float>(location, num, dim);
             
             // 预估聚类数
             LogMeans log_means;
@@ -111,7 +125,7 @@ int main(int argc, const char *argv[]) {
 
         while (!bar.is_completed()) {
             bar.tick();
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
         job_completion_thread.join();
         show_console_cursor(true);

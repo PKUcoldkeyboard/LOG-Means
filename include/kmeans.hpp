@@ -9,7 +9,8 @@
 
 class KMeans {
 public:
-    KMeans(int k, int maxIter = 20, int initSteps = 2, float tol = 0.0001) : k(k), maxIter(maxIter), initSteps(initSteps), tol(tol) {}
+    KMeans(int k, int maxIter = 20, int initSteps = 2, double tol = 1e-4) : k(k), maxIter(maxIter), initSteps(initSteps), tol(tol) {}
+
     void set_k(int k) { 
         this->k = k; 
     }
@@ -47,7 +48,7 @@ private:
     // The number of steps for k-means|| initialization mode. Must be > 0.
     int initSteps;
     // the convergence tolerance for iterative algorithms (>= 0).
-    float tol;
+    double tol;
     Random random;
 };
 
@@ -65,41 +66,82 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
     // initSteps为超参数，一般取lgn, spark默认取2， l=2k
     const int l = 2 * k;
     for (int round = 0; round < initSteps; round++) {
+        // KITSUNE可能会溢出，简单处理下，如果dim=115, 则使用double
+        if (dim == 115) {
+            std::vector<double> minDists(n, 0);
+            double sum = 0;
+            #pragma omp parallel for reduction(+:sum)
+            for (int i = 0; i < n; i++) {
+                double minDist = point_cost<Scalar>(centroids, data.row(i));
+                minDists[i] = minDist * minDist;
+                sum += minDists[i];
+            }
+            // 加权概率选取质心
+            for (int i = 0; i < n; i++) {
+                double prob = l * minDists[i] / sum;
+                if (random.randn() < prob) {
+                    centroids.emplace_back(data.row(i));
+                }
+            }
+            continue;
+        }
         std::vector<Scalar> minDists(n, 0);
-        // Scalar sum = 0; 无论float还是double都用double存和，因为KITSUNE可能会溢出
-        double sum = 0;
+        Scalar sum = 0;
         #pragma omp parallel for reduction(+:sum)
         for (int i = 0; i < n; i++) {
-            minDists[i] = point_cost<Scalar>(centroids, data.row(i));
+            Scalar minDist = point_cost<Scalar>(centroids, data.row(i));
+            minDists[i] = minDist * minDist;
             sum += minDists[i];
         }
         // 加权概率选取质心
         for (int i = 0; i < n; i++) {
             Scalar prob = l * minDists[i] / sum;
-            if (random.randn() < prob) {
+            Scalar r = static_cast<Scalar>(random.randn());
+            if (r < prob) {
                 centroids.emplace_back(data.row(i));
             }
         }
     }
 
-    // 候选质心数小于k，则返回所有质心
     if (centroids.size() <= k) {
-        // SPDLOG_INFO("centroids size: {} <= {}", centroids.size(), k);
+        // 补齐到k个
+        while (centroids.size() < k) {
+            std::vector<Scalar> minDists(n, 0);
+            Scalar sum = 0;
+            #pragma omp parallel for reduction(+:sum)
+            for (int i = 0; i < n; i++) {
+                Scalar minDist = point_cost<Scalar>(centroids, data.row(i));
+                minDists[i] = minDist * minDist;
+                sum += minDists[i];
+            }
+            // 加权概率选取质心
+            for (int i = 0; i < n; i++) {
+                if (centroids.size() >= k) {
+                    return centroids;
+                }
+                Scalar prob = l * minDists[i] / sum;
+                if (random.randn() < prob) {
+                    centroids.emplace_back(data.row(i));
+                }
+            }
+        }
         return centroids;
     }
 
-    // 可能大于k个质心，继续后续处理，先计算出权重：表示距离x点最近的点的个数
+    // 可能大于k个质心，继续后续处理，先计算出权重：表示距离C中x点最近的点的个数
     std::vector<int> weights(centroids.size(), 0);
-    for (int i = 0; i < centroids.size(); i++) {
+    #pragma omp parallel for
+    for (int i = 0; i < n; i++) {
         int minIndex = 0;
-        Scalar minDist = utils::euclidean_distance<Scalar>(centroids[i], centroids[0]);
+        Scalar minDist = utils::euclidean_distance<Scalar>(data.row(i), centroids[0]);
         for (int j = 1; j < centroids.size(); j++) {
-            Scalar dist = utils::euclidean_distance<Scalar>(centroids[i], centroids[j]);
+            Scalar dist = utils::euclidean_distance<Scalar>(data.row(i), centroids[j]);
             if (dist < minDist) {
                 minDist = dist;
                 minIndex = j;
             }
         }
+        #pragma omp atomic
         weights[minIndex]++;
     }
 
@@ -112,21 +154,26 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
     // 根据距离和权重选择其余的质心
     for (int i = 1; i < k; i++) {
         std::vector<Scalar> minDists(centroids.size(), 0);
-        // 计算每个候选质心到已选质心集合的最小距离
+        // 计算每个候选质心到已选质心集合的最小距离平方
+        Scalar sum = 0;
+        #pragma omp parallel for reduction(+:sum)
         for (int j = 0; j < centroids.size(); j++) {
-            minDists[j] = point_cost<Scalar>(newCentroids, centroids[j]);
+            Scalar minDist = point_cost<Scalar>(newCentroids, centroids[j]);
+            minDists[j] = minDist * minDist;
+            sum += minDists[j];
         }
-        // 计算每个候选质心被选为新质心的权重（距离 * 候选质心权重）
+        // 计算每个候选质心被选为新质心的权重（最小距离平方 * 候选质心权重）
         std::vector<Scalar> probs(centroids.size(), 0);
+        #pragma omp parallel for
         for (int j = 0; j < centroids.size(); j++) {
-            probs[j] = minDists[j] * weights[j];
+            probs[j] = l * minDists[j] * weights[j] / sum;
         }
 
         // 根据权重选择新的质心
         int c = random.rand_descrete(probs.begin(), probs.end());
         newCentroids[i] = centroids[c];
     }
-    return centroids;
+    return newCentroids;
 }
 
 template<typename Scalar>
@@ -148,7 +195,6 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::fit(Eigen::Matrix<
 
     // KMeansⅡ初始化质心
     auto centroids = init_centroids<Scalar>(data);
-    k = centroids.size();
 
     std::vector<std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>>> clusters(k, std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>>());
     for (int iter = 0; iter < maxIter; iter++) {
@@ -176,12 +222,22 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::fit(Eigen::Matrix<
 
         // 更新每个簇的质心
         std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> oldCentroids = centroids;
+        #pragma omp parallel for
         for (int i = 0; i < k; i++) {
             // 避免空簇
             if (clusters[i].empty()) {
-                // 随机选择其它非空簇的质心作为新质心
-                // todo
-                // continue;
+                // 选择离已有质心最远的点作为新质心
+                int maxDistId = 0;
+                Scalar maxDist = utils::euclidean_distance<Scalar>(oldCentroids[0], oldCentroids[0]);
+                for (int j = 1; j < k; j++) {
+                    Scalar dist = utils::euclidean_distance<Scalar>(oldCentroids[j], oldCentroids[j]);
+                    if (dist > maxDist) {
+                        maxDist = dist;
+                        maxDistId = j;
+                    }
+                }
+                centroids[i] = oldCentroids[maxDistId];
+                continue;
             }
             // 计算clusters[i]中所有点的均值
             Eigen::RowVector<Scalar, Eigen::Dynamic> sum = Eigen::RowVector<Scalar, Eigen::Dynamic>::Zero(dim);
@@ -195,7 +251,7 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::fit(Eigen::Matrix<
         // 检查质心是否变化
         for (int i = 0; i < k; i++) {
             // 1e-4：scikit-learn中的标准
-            if (utils::euclidean_distance<Scalar>(oldCentroids[i], centroids[i]) > 1e-4) {
+            if (utils::euclidean_distance<Scalar>(oldCentroids[i], centroids[i]) > tol) {
                 converged = false;
                 break;
             }

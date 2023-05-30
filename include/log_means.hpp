@@ -25,6 +25,13 @@ public:
     template<typename Scalar>
     int run(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> &data, int k_low, int k_high, Scalar epsilon = 0);
 
+    template<typename Scalar>
+    void print_sse(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> &data, int k_high) {
+        for (int k = 1; k <= k_high; k++) {
+            std::cout << "K = " << k << ", sse = " << kmeans_sse(data, k) << std::endl;
+        }
+    }
+
 private:
     bool directly_adjacent(int k_low, int k_high) {
         return k_low + 1 == k_high;
@@ -41,12 +48,10 @@ int LogMeans::run(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::R
     K[k_high] = sseHigh;
     while (k_low < k_high && !directly_adjacent(k_low, k_high)) {
         int k_mid = (k_low + k_high) / 2;
-        std::cout << "k_Low=" << k_low << ",k_mid=" << k_mid << ",k_high=" << k_high << std::endl;
         Scalar sseMid = kmeans_sse(data, k_mid);
         K[k_mid] = sseMid;
         Scalar radioLeft = sseLow / sseMid;
         Scalar radioRight = sseMid / sseHigh;
-        std::cout << "radioLeft=" << radioLeft << ", radioRight=" << radioRight << std::endl;
         M[k_mid] = radioLeft;
         M[k_high] = radioRight;
         int temp_klow = k_low; // 1
@@ -66,17 +71,19 @@ int LogMeans::run(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::R
         }
         sseHigh = K[k_high];
         sseLow = K[k_low];
+        std::cout << "radioLeft = " << radioLeft << ", radioRight = " << radioRight << std::endl;
+        std::cout << "update: >>> k_low = " << k_low << ", k_high = " << k_high << std::endl;
     }
-    int result = 0;
-    Scalar maxRadio = 0;
-    std::cout << "k_low: " << k_low << ", k_high: " << k_high << std::endl;
-    for (const auto &[k, v]: M) {
-        if (k >= k_low && k <= k_high && v > maxRadio) {
-            maxRadio = v;
-            result = k;
-        }
-    }
-    return result;
+    // int result = 0;
+    // Scalar maxRadio = 0;
+    // std::cout << "k_low: " << k_low << ", k_high: " << k_high << std::endl;
+    // for (const auto &[k, v]: M) {
+    //     if (k >= k_low && k <= k_high && v > maxRadio) {
+    //         maxRadio = v;
+    //         result = k;
+    //     }
+    // }
+    return k_high;
 }
 
 #endif // __LOG__MEANS__HPP__
