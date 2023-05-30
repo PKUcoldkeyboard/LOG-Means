@@ -173,6 +173,10 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
                 if (centroids.size() >= k) {
                     return centroids;
                 }
+                auto condidate = data.row(i);
+                if (std::find(centroids.begin(), centroids.end(), condidate) != centroids.end()) {
+                    continue;
+                }
                 Scalar prob = l * minDists[i] / sum;
                 if (random.randn() < prob) {
                     centroids.emplace_back(data.row(i));

@@ -16,30 +16,45 @@ LOG-Means算法是一种新型、简化的、高效、对大数据集和大搜�
 
 - Log-Means算法[1]
   - 定义键值数据结构K和M, K存储k的已评估值和相应的SSE，M存储k的已评估值与k和左侧邻值之间相应的SSE Ratio
-  - 分别对klow和khigh进行KMeans聚类，聚类结果{k, SSE}存储在K中
-  - 定义kmid，对kmid进行KMeans聚类，聚类结果{kmid, SSE}存储在K中
-  - 分别计算kmid与klow、khigh的SSE Ratio，存储在M中
-  - 检索klow、khigh对应的SSE用于下次迭代
-  - klow与khigh直接相邻时结束循环
+  - 当klow和khigh相差大于1（不直接相邻）时，进行迭代
+    - 分别对klow和khigh进行KMeans聚类，聚类结果{k, SSE}存储在K中
+    - 定义kmid，对kmid进行KMeans聚类，聚类结果{kmid, SSE}存储在K中
+    - 分别计算kmid与klow、khigh的SSE Ratio，存储在M中
+    - 从M中获取最大的SSE Ratio对应的k值，作为下一次迭代的khigh值
+    - 从K中获取khigh的相邻值，作为下一次迭代的klow值
+    - 检索klow、khigh对应的SSE作为下一轮迭代的SSEHigh和SSELow
 
 <div align="center">
   <img src="image/algorithm.png">
 </div>
 
-- k-means||算法[2]
+- k-means||初始化[2]
   - 随机选择一个中心点
   - 计算满足概率条件的多个候选中心点C（可能大于k个）
-    - 迭代r次，<del>r=logn</del>(r=5，因为实际实验证明5次重复取样就能得到较好的聚类初始中心)
+    - 迭代r次，<del>r=logn</del>(这里设定r=2，Apache Sparch MLLib中的默认值)
     - 根据probability，每次迭代取样O(k)个样本
-    - 最后得到O(kr)个样本
-  - 给C中所有点赋予权重值，这个权重值表示距离x点最近的点的个数。
-  - 使用带有权重的K-Means++算法从C中筛选出k个中心点
+    - 最后得到大约O(kr)个样本
+  - 如果C中的点个数小于k，则继续迭代，直到C中的点个数等于k，然后返回
+  - 如果C中的点个数大于k，则进行下一步
+    - 给C中所有点赋予权重值，这个权重值表示距离x点最近的点的个数。
+    - 使用带有权重的K-Means++算法从C中筛选出k个中心点
 
 <div align="center">
   <img src="image/Scalable-KMeans++.jpg" style="width: 70%">
 </div>
 
+- k-means++初始化
+  - 随机选择一个中心点
+  - 计算每个点到中心点的距离，选择最远的点作为下一个中心点
+  - 重复上述过程，直到选出k个中心点
+
+- random初始化
+  - 随机选择k个点作为中心点
+
 - Elbow算法[3]
+  - 对于给定的数据集，分别计算k=1,2,...,kmax的KMeans聚类结果
+  - 计算每个k对应的SSE
+  - 画出k-SSE曲线，选择拐点对应的k值作为簇数目估计值
 
 ## 环境需求
 - C++编译器（支持C++11或更高版本）
@@ -53,6 +68,9 @@ LOG-Means算法是一种新型、简化的、高效、对大数据集和大搜�
 
 - 运行项目
 ```
+// 默认运行模式，对Avila数据集在[0.5c, 2c]范围内进行簇数目估计
+./cluster
+
 // 运行帮助
 ./cluster --help
 
@@ -82,6 +100,15 @@ LOG-Means算法是一种新型、简化的、高效、对大数据集和大搜�
 4. KDD 包含了 4,898,431 个数据点，每个点有 34 个维度，总计 23 个类
 5. KITSUNE 包含了 20,253,460 个数据点，每个点有 115 个维度，总计 8 个类
 6. KITSUNE10 包含了 1,868,224 个数据点，每个点有 115 个维度，总计 8 个类
+
+## 运行结果
+### 指标
+1. $\delta_k$
+2. Running Time
+
+### 表格
+
+### 图表
 
 
 ## 项目协作者
