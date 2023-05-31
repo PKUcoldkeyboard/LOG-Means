@@ -2,7 +2,7 @@
 
 <div align="center">
   <img src="https://img.shields.io/badge/version-0.1-orange"/>
-  <img src="https://img.shields.io/badge/Eigen3-3.3.39-blueviolet">
+  <img src="https://img.shields.io/badge/Eigen3-3.4.0-blueviolet">
   <img src="https://img.shields.io/badge/Linux-passing-brightgreen">
   <img src="https://img.shields.io/badge/c%2B%2B-%3E%3D17-brightgreen">
   <img src="https://img.shields.io/github/stars/PKUcoldkeyboard/LOG-Means?style=social">
