@@ -8,7 +8,7 @@
 #include "spdlog_common.h"
 #include "kmeans.hpp"
 #include "log_means.hpp"
-#include "eigen-3.4.0/Eigen/Dense"
+#include <eigen-3.4.0/Eigen/Dense>
 
 using namespace indicators;
 
@@ -57,7 +57,7 @@ int main(int argc, const char *argv[]) {
             auto data = utils::ifs_read_data_from_file<float>(location, num, dim);
 
             // 预估聚类数
-            LogMeans log_means;
+            LogMeans log_means(dataset);
             // 搜索范围为 [0.5c, 2c]
             int k_low = classes / 2;
             int k_high = args.search ? 10 * classes : 2 * classes;
@@ -112,7 +112,7 @@ int main(int argc, const char *argv[]) {
             auto data = utils::ifs_read_data_from_file<float>(location, num, dim);
             
             // 预估聚类数
-            LogMeans log_means;
+            LogMeans log_means(dataset);
             // 搜索范围为 [0.5c, 2c]
             int k_low = classes / 2;
             int k_high = args.search ? 10 * classes : 2 * classes;

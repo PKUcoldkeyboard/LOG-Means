@@ -104,12 +104,12 @@ LOG-Means算法是一种新型、简化的、高效、对大数据集和大搜�
 ## 运行结果
 ### 指标
 1. $\delta_k=\frac{k-c}{c}*100\%$ (k是预估类数, c是真实类数)
-2. Run Time(s)
+2. Runtime(s)
 
-### 表格
-
-
-### 图表
+### 结果
+<div align="center">
+  <img src="image/result.png">
+</div>
 
 
 ## 项目协作者

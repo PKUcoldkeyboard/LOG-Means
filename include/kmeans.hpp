@@ -1,6 +1,6 @@
 #ifndef __KMEANS_HPP__
 #define __KMEANS_HPP__
-#include "eigen-3.4.0/Eigen/Dense"
+#include <eigen-3.4.0/Eigen/Dense>
 #include <vector>
 #include <omp.h>
 #include "random.hpp"
@@ -117,7 +117,12 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
     centroids.emplace_back(data.row(c0));
 
     // KMeansⅡ选取方法
-    // initSteps为超参数，一般取lgn, spark默认取2， l=2k
+    // initSteps为超参数，一般取lg(phi), spark默认取2， l=2k
+    // 如果超过100万个数据点，取initSteps=4，避免第一轮取得质心过少
+    if (n > 1000000) {
+        initSteps = 4;
+    }
+
     const int l = 2 * k;
     for (int round = 0; round < initSteps; round++) {
         // KITSUNE可能会溢出，简单处理下，如果dim=115, 则使用double
@@ -131,10 +136,14 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
                 sum += minDists[i];
             }
             // 加权概率选取质心
+            #pragma omp parallel for
             for (int i = 0; i < n; i++) {
                 double prob = l * minDists[i] / sum;
-                if (random.randn() < prob) {
-                    centroids.emplace_back(data.row(i));
+                #pragma omp critical
+                {
+                    if (random.randn() < prob) {
+                        centroids.emplace_back(data.row(i));
+                    }
                 }
             }
             continue;
@@ -148,42 +157,17 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
             sum += minDists[i];
         }
         // 加权概率选取质心
+        #pragma omp parallel for
         for (int i = 0; i < n; i++) {
             Scalar prob = l * minDists[i] / sum;
             Scalar r = static_cast<Scalar>(random.randn());
-            if (r < prob) {
-                centroids.emplace_back(data.row(i));
-            }
-        }
-    }
-
-    if (centroids.size() <= k) {
-        // 补齐到k个
-        while (centroids.size() < k) {
-            std::vector<Scalar> minDists(n, 0);
-            Scalar sum = 0;
-            #pragma omp parallel for reduction(+:sum)
-            for (int i = 0; i < n; i++) {
-                Scalar minDist = point_cost<Scalar>(centroids, data.row(i));
-                minDists[i] = minDist * minDist;
-                sum += minDists[i];
-            }
-            // 加权概率选取质心
-            for (int i = 0; i < n; i++) {
-                if (centroids.size() >= k) {
-                    return centroids;
-                }
-                auto condidate = data.row(i);
-                if (std::find(centroids.begin(), centroids.end(), condidate) != centroids.end()) {
-                    continue;
-                }
-                Scalar prob = l * minDists[i] / sum;
-                if (random.randn() < prob) {
+            #pragma omp critical
+            {
+                if (r < prob) {
                     centroids.emplace_back(data.row(i));
                 }
             }
         }
-        return centroids;
     }
 
     // 可能大于k个质心，继续后续处理，先计算出权重：表示距离C中x点最近的点的个数

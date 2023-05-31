@@ -2,16 +2,34 @@
 #define __LOG__MEANS__HPP__
 #include "kmeans.hpp"
 #include "utils.hpp"
+#include "json11.hpp"
 #include <queue>
 #include <unordered_map>
 
 class LogMeans {
 public:
+    LogMeans(std::string dataset) {
+        result = json11::Json::object({
+            {"dataset", dataset},
+            {"k", 0},
+            {"sse", 0},
+            {"sse_hist", json11::Json::array()}
+        });
+    }
+
     template<typename Scalar>
     Scalar kmeans_sse(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> &data, int k) {
         KMeans kmeans(k);
         auto centroids = kmeans.fit<Scalar>(data);
-        return utils::compute_sse<Scalar>(data, centroids);
+        auto sse =  utils::compute_sse<Scalar>(data, centroids);
+        // 向sse_hist中插入一条记录(k, sse)
+        auto result_items = result.object_items();
+        std::vector<json11::Json> new_array = result_items["sse_hist"].array_items();
+        new_array.push_back(json11::Json::array({k, sse}));
+        result_items["sse_hist"] = new_array;
+        result = json11::Json(result_items);
+
+        return sse;
     }
     /**
      * 预估数据集簇的数量
@@ -33,6 +51,7 @@ public:
     }
 
 private:
+    json11::Json result;
     bool directly_adjacent(int k_low, int k_high) {
         return k_low + 1 == k_high;
     }
@@ -54,8 +73,7 @@ int LogMeans::run(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::R
         Scalar radioRight = sseMid / sseHigh;
         M[k_mid] = radioLeft;
         M[k_high] = radioRight;
-        int temp_klow = k_low; // 1
-        int temp_khigh = k_high; // 24
+
         Scalar maxRadio = 0;
         for (const auto &[k, v]: M) {
             if (v > maxRadio) {
@@ -74,15 +92,17 @@ int LogMeans::run(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::R
         std::cout << "radioLeft = " << radioLeft << ", radioRight = " << radioRight << std::endl;
         std::cout << "update: >>> k_low = " << k_low << ", k_high = " << k_high << std::endl;
     }
-    // int result = 0;
-    // Scalar maxRadio = 0;
-    // std::cout << "k_low: " << k_low << ", k_high: " << k_high << std::endl;
-    // for (const auto &[k, v]: M) {
-    //     if (k >= k_low && k <= k_high && v > maxRadio) {
-    //         maxRadio = v;
-    //         result = k;
-    //     }
-    // }
+    // 更新result记录
+    auto result_items = result.object_items();
+    result_items["k"] = k_high;
+    result_items["sse"] = K[k_high];
+    result = json11::Json(result_items);
+
+    // 将result写入result.json文件
+    std::ofstream ofs("result_" + result["dataset"].string_value() + ".json");
+    ofs << result.dump();
+    ofs.close();
+
     return k_high;
 }
 

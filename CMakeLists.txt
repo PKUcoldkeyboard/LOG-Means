@@ -34,6 +34,9 @@ include_directories(include)
 # 第三方头文件
 include_directories(third-party)
 
+set(Eigen3_DIR "third-party/eigen-3.4.0/cmake")
+find_package(Eigen3 REQUIRED)
+
 # Openmp引入
 find_package(OpenMP REQUIRED)
 if(OPENMP_FOUND)
@@ -42,8 +45,14 @@ if(OPENMP_FOUND)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 endif()
 
+# json11引入
+set(JSON11_CPP "third-party/json11.cpp")
+set(JSON11_H "third-party/json11.hpp")
+add_library(json11 ${JSON11_CPP} ${JSON11_H})
+
 # 定义可执行文件
 add_executable(cluster ${SOURCES})
+target_link_libraries(cluster json11)
 
 # 添加测试
 # add_subdirectory(third-party/googletest-1.13.0)
