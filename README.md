@@ -111,14 +111,6 @@ LOG-Means算法是一种新型、简化的、高效、对大数据集和大搜�
   <img src="image/result.png">
 </div>
 
-
-## 项目协作者
-<a href="https://github.com/PKUcoldkeyboard/LOG-Means/graphs/contributors">
-  <img src="https://contrib.rocks./image?repo=PKUcoldkeyboard/LOG-Means" />
-</a>
-
-Made with [contrib.rocks](https://contrib.rocks.).
-
 ## 许可证
 This project is licensed under the Apache 2.0 License. See the LICENSE file for more information.
 
