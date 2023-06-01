@@ -247,9 +247,6 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::fit(Eigen::Matrix<
 
     std::vector<std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>>> clusters(k, std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>>());
     
-    // 创建一个2D向量用于存储每个数据点到每个质心的距离
-    std::vector<std::vector<Scalar>> distances(n, std::vector<Scalar>(k, 0));
-    
     for (int iter = 0; iter < maxIter; iter++) {
         // 清空clusters
         for (int i = 0; i < k; i++) {
