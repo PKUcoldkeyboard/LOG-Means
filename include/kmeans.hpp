@@ -125,9 +125,9 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::init_centroids(Eig
 
     // KMeansⅡ选取方法
     // initSteps为超参数，一般取lg(phi), spark默认取2， l=2k
-    // 如果超过100万个数据点，取initSteps=4，避免第一轮取得质心过少
-    if (n > 1000000) {
-        initSteps = 4;
+    // 如果超过100万个数据点，且k较大，取initSteps=5，避免第一轮取的质心小于k
+    if (n > 1000000 && k > 20) {
+        initSteps = 5;
     }
 
     const int l = 2 * k;
