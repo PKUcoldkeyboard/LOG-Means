@@ -1,6 +1,7 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
+#include <omp.h>
 #include "indicators.hpp"
 #include "inifile.hpp"
 #include "argparse.hpp"
@@ -9,6 +10,13 @@
 #include "kmeans.hpp"
 #include "log_means.hpp"
 #include <eigen-3.4.0/Eigen/Dense>
+#ifndef EIGEN_USE_MKL_ALL
+#define EIGEN_USE_MKL_ALL
+#endif
+
+#ifndef EIGEN_VECTORIZE_SSE4_2
+#define EIGEN_VECTORIZE_SSE4_2
+#endif
 
 using namespace indicators;
 
@@ -25,7 +33,10 @@ struct MyArgs: public argparse::Args {
 };
 
 int main(int argc, const char *argv[]) {
-    Eigen::setNbThreads(4);
+    // 设置OpenMP线程数
+    auto nthreads = std::thread::hardware_concurrency();
+    omp_set_num_threads(nthreads);
+    Eigen::setNbThreads(nthreads);
     Eigen::initParallel(); 
     MyArgs args = argparse::parse<MyArgs>(argc, argv);
     util::inifile ini("config.ini");

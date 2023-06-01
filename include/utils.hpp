@@ -8,6 +8,13 @@
 #include <sstream>
 #include <unordered_map>
 #include <eigen-3.4.0/Eigen/Dense>
+#ifndef EIGEN_USE_MKL_ALL
+#define EIGEN_USE_MKL_ALL
+#endif
+
+#ifndef EIGEN_VECTORIZE_SSE4_2
+#define EIGEN_VECTORIZE_SSE4_2
+#endif
 #include "spdlog_common.h"
 
 namespace utils {

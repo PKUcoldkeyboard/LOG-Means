@@ -1,6 +1,13 @@
 #ifndef __KMEANS_HPP__
 #define __KMEANS_HPP__
 #include <eigen-3.4.0/Eigen/Dense>
+#ifndef EIGEN_USE_MKL_ALL
+#define EIGEN_USE_MKL_ALL
+#endif
+
+#ifndef EIGEN_VECTORIZE_SSE4_2
+#define EIGEN_VECTORIZE_SSE4_2
+#endif
 #include <vector>
 #include <omp.h>
 #include "random.hpp"
@@ -239,6 +246,10 @@ std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::fit(Eigen::Matrix<
     auto centroids = init_centroids<Scalar>(data);
 
     std::vector<std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>>> clusters(k, std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>>());
+    
+    // 创建一个2D向量用于存储每个数据点到每个质心的距离
+    std::vector<std::vector<Scalar>> distances(n, std::vector<Scalar>(k, 0));
+    
     for (int iter = 0; iter < maxIter; iter++) {
         // 清空clusters
         for (int i = 0; i < k; i++) {
