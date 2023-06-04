@@ -8,7 +8,7 @@
 
 class LogMeans {
 public:
-    LogMeans(std::string dataset) {
+    LogMeans(std::string dataset, std::string initMode) : initMode(initMode) {
         result = json11::Json::object({
             {"dataset", dataset},
             {"k", 0},
@@ -19,7 +19,7 @@ public:
 
     template<typename Scalar>
     Scalar kmeans_sse(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> &data, int k) {
-        KMeans kmeans(k);
+        KMeans kmeans(k, initMode);
         auto centroids = kmeans.fit<Scalar>(data);
         auto sse =  utils::compute_sse<Scalar>(data, centroids);
         // 向sse_hist中插入一条记录(k, sse)
@@ -52,6 +52,7 @@ public:
 
 private:
     json11::Json result;
+    std::string initMode;
     bool directly_adjacent(int k_low, int k_high) {
         return k_low + 1 == k_high;
     }
@@ -99,7 +100,7 @@ int LogMeans::run(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::R
     result = json11::Json(result_items);
 
     // 将result写入result.json文件
-    std::ofstream ofs("result_" + result["dataset"].string_value() + ".json");
+    std::ofstream ofs("result_logmeans_" + result["dataset"].string_value() + ".json");
     ofs << result.dump();
     ofs.close();
 

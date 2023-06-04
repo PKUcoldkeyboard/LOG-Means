@@ -8,6 +8,7 @@
 #include "utils.hpp"
 #include "spdlog_common.h"
 #include "kmeans.hpp"
+#include "elbow.hpp"
 #include "log_means.hpp"
 #include <eigen-3.4.0/Eigen/Dense>
 #ifndef EIGEN_USE_MKL_ALL
@@ -26,10 +27,12 @@ std::vector<std::string> datasets = {
 };
 
 struct MyArgs: public argparse::Args {
+    bool &elbow = flag("e,elbow", "Run elbow method");
     bool &all = flag("a,all", "Run all datasets");
     // 大范围搜索模式
     bool &search = flag("s,search", "Large search space mode - k: [2, 2c] or k: [2, 10c]");
     std::string &dataset = kwarg("d,dataset", "Dataset name [Avila/DSDD/KDD/KITSUNE10/KITSUNE/MNIST] ").set_default("Avila");
+    std::string &initMode = kwarg("i,init", "Init mode [random/kmeans++/kmeans||)]").set_default("kmeans||");
 };
 
 int main(int argc, const char *argv[]) {
@@ -40,6 +43,7 @@ int main(int argc, const char *argv[]) {
     Eigen::initParallel(); 
     MyArgs args = argparse::parse<MyArgs>(argc, argv);
     util::inifile ini("config.ini");
+    auto initMode = args.initMode;
     if (args.all) {
         ProgressBar bar{option::BarWidth{50},
             option::Start{"["},
@@ -68,20 +72,30 @@ int main(int argc, const char *argv[]) {
             auto data = utils::ifs_read_data_from_file<float>(location, num, dim);
 
             // 预估聚类数
-            LogMeans log_means(dataset);
-            // 搜索范围为 [0.5c, 2c]
-            int k_low = classes / 2;
-            int k_high = args.search ? 10 * classes : 2 * classes;
-            auto k = log_means.run<float>(data, k_low, k_high);
-            SPDLOG_INFO("Estimated number of clusters: {}", k);
+            int k = 0;
+            if (args.elbow) {
+                Elbow elbow(dataset, initMode);
+                // 搜索范围为 [2, 2c]
+                int k_low = 2;
+                int k_high = args.search ? 10 * classes : 2 * classes;
+                // 半自动， 不需要输出
+                elbow.run<float>(data, k_low, k_high);
+                SPDLOG_INFO("You should choose the number of clusters from the elbow plot.");
+            } else {
+                LogMeans log_means(dataset, initMode);
+                // 搜索范围为 [0.5c, 2c]
+                int k_low = classes / 2;
+                int k_high = args.search ? 10 * classes : 2 * classes;
+                k = log_means.run<float>(data, k_low, k_high);
+                SPDLOG_INFO("Estimated number of clusters: {}", k);
+                float delta = utils::compute_delta(k, classes);
+                SPDLOG_INFO("Delta: {:.5f}", delta);
+            }
 
             SPDLOG_INFO("Done Running dataset {}", dataset);
             
             auto end = std::chrono::steady_clock::now();
             SPDLOG_INFO("Time elapsed: {}ms", std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
-
-            float delta = utils::compute_delta(k, classes);
-            SPDLOG_INFO("Delta: {:.5f}", delta);
 
             cnt++;
             if (cnt == 5) {
@@ -115,28 +129,38 @@ int main(int argc, const char *argv[]) {
         SPDLOG_INFO("Number of samples: {}", num);
         SPDLOG_INFO("Dimension: {}", dim);
         SPDLOG_INFO("Number of classes: {}", classes);
+        SPDLOG_INFO("Init Mode: {}", args.initMode);
 
-        auto job = [&bar, &dataset, &location, &num, &dim, &classes, &args]() {
+        auto job = [&bar, &dataset, &location, &num, &dim, &classes, &args, &initMode]() {
             // 计算花费时间
             auto start = std::chrono::steady_clock::now();
             // 读取数据集
             auto data = utils::ifs_read_data_from_file<float>(location, num, dim);
             
             // 预估聚类数
-            LogMeans log_means(dataset);
-            // 搜索范围为 [0.5c, 2c]
-            int k_low = classes / 2;
-            int k_high = args.search ? 10 * classes : 2 * classes;
-            auto k = log_means.run<float>(data, k_low, k_high);
-            SPDLOG_INFO("Estimated number of clusters: {}", k);
-
+            int k = 0;
+            if (args.elbow) {
+                Elbow elbow(dataset, initMode);
+                // 搜索范围为 [2, 2c]
+                int k_low = 2;
+                int k_high = args.search ? 10 * classes : 2 * classes;
+                // 半自动， 不需要输出
+                elbow.run<float>(data, k_low, k_high);
+                SPDLOG_INFO("You should choose the number of clusters from the elbow plot.");
+            } else {
+                LogMeans log_means(dataset, initMode);
+                // 搜索范围为 [0.5c, 2c]
+                int k_low = classes / 2;
+                int k_high = args.search ? 10 * classes : 2 * classes;
+                k = log_means.run<float>(data, k_low, k_high);
+                SPDLOG_INFO("Estimated number of clusters: {}", k);
+                float delta = utils::compute_delta(k, classes);
+                SPDLOG_INFO("Delta: {:.5f}", delta);
+            }
             bar.mark_as_completed();
             SPDLOG_INFO("Done Running dataset {}", dataset);
             auto end = std::chrono::steady_clock::now();
             SPDLOG_INFO("Time elapsed: {}ms", std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
-
-            float delta = utils::compute_delta(k, classes);
-            SPDLOG_INFO("Delta: {:.5f}", delta);
         };
         std::thread job_completion_thread(job);
 

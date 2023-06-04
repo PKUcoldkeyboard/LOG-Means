@@ -16,7 +16,7 @@
 
 class KMeans {
 public:
-    KMeans(int k, int maxIter = 20, int initSteps = 2, double tol = 1e-4) : k(k), maxIter(maxIter), initSteps(initSteps), tol(tol) {}
+    KMeans(int k, std::string initMode, int maxIter = 20, int initSteps = 2, double tol = 1e-4) : k(k), maxIter(maxIter), initSteps(initSteps), tol(tol), initMode(initMode) {}
 
     void set_k(int k) { 
         this->k = k; 
@@ -72,6 +72,9 @@ private:
     int initSteps;
     // the convergence tolerance for iterative algorithms (>= 0).
     double tol;
+    // the way to init centroids
+    std::string initMode;
+    // random generator
     Random random;
 };
 
@@ -241,9 +244,18 @@ template<typename Scalar>
 std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> KMeans::fit(Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> &data) {
     int n = data.rows();
     int dim = data.cols();
-
-    // KMeansⅡ初始化质心
-    auto centroids = init_centroids<Scalar>(data);
+    
+    // 初始化质心
+    std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>> centroids;
+    if (initMode == "kmeans||") {
+        centroids = init_centroids<Scalar>(data);
+    } else if (initMode == "kmeans++") {
+        centroids = kmeans_plus_plus_init_centroids<Scalar>(data);
+    } else if (initMode == "random") {
+        centroids = random_init_centroids<Scalar>(data);
+    } else {
+        throw std::invalid_argument("initMode must be one of 'kmeans||', 'kmeans++' and 'random'");
+    }
 
     std::vector<std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>>> clusters(k, std::vector<Eigen::RowVector<Scalar, Eigen::Dynamic>>());
     
