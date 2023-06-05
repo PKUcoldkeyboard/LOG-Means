@@ -117,6 +117,11 @@ LOG-Means算法是一种新型、简化的、高效、对大数据集和大搜�
   <img src="image/result.png">
 </div>
 
+<div align="center" style="display: flex; align-items: center; justify-content: center">
+    <img src="image/Runtime.png" style="width: 45%" >
+    <img src="image/delta.png" style="width: 45%" >
+</div>
+
 ## 许可证
 This project is licensed under the Apache 2.0 License. See the LICENSE file for more information.
 
