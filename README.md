@@ -114,7 +114,7 @@ LOG-Means算法是一种新型、简化的、高效、对大数据集和大搜�
 
 ### 结果
 <div align="center">
-  <img src="image/result.png">
+  <img src="image/result.png" style="width: 90%;">
 </div>
 
 <div align="center" style="display: flex; align-items: center; justify-content: center">
